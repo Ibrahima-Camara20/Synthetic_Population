@@ -1,7 +1,7 @@
 import time
 import ollama
 
-MODEL = "llama3"
+MODEL = "llama3" #Write the chosen model
 
 agent_a = {
     "name": "Benjamin",
@@ -9,7 +9,7 @@ agent_a = {
 }
 
 agent_b = {
-    "name": "Cathrine",
+    "name": "Catherine",
     "role": "Une personne agée et consciencieuse avec une petite retraite.",
 }
 
@@ -40,7 +40,7 @@ def get_response(agent, conversation_log):
     return response["message"]["content"]
 
 
-def run_conversation(topic, turns=3):
+def run_conversation(topic, turns=4):
     print(f"=== Conversation: '{topic}' ===\n")
 
     # Simple list of (speaker_name, text) tuples
