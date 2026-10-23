@@ -14,4 +14,5 @@ Run `sim.py` in a terminal
 python sim.py context.txt "Votre question ?" [--csv population_finale.csv] [--model llama3] [--output result.txt] [--limit N]
 ```
 `context.txt` assigns values to attributes
+
 The `limit` parameter determines how many agents the program will use(default is all of them)
