@@ -1,0 +1,12 @@
+A0 : {Moins de 30 ans, Entre 30 et 55 ans, Plus de 55 ans}
+A1 : {Homme, Femme, Non-spécifié}
+A2 : {Sans diplôme ou brevet, Baccalauréat, Études supérieures (Bac+3 ou plus)}
+A3 : {Habite en zone rurale, Habite en banlieue ou petite ville, Habite en grande ville}
+A4 : {Revenus modestes, Revenus moyens, Revenus aisés}
+A5 : {Sans emploi ou étudiant, Employé ou ouvrier, Cadre ou profession libérale}
+A6 : {Célibataire, En couple sans enfant, En couple avec enfants}
+A7 : {Peu intéressé par la politique, Moyennement intéressé par la politique, Très intéressé par la politique}
+A8 : {Locataire, Propriétaire, Hébergé à titre gratuit}
+A9 : {Sensibilité politique de gauche, Sensibilité politique centriste, Sensibilité politique de droite}
+A10 : {Utilise rarement les outils numériques, Utilise modérément les outils numériques, Utilise intensivement les outils numériques}
+A11 : {Plutôt pessimiste sur l'avenir, Ni optimiste ni pessimiste sur l'avenir, Plutôt optimiste sur l'avenir}
