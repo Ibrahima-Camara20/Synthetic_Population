@@ -10,7 +10,6 @@ ollama serve
 
 ## Usage
 Run `AIconv.py` in a terminal
-```console
 ```bash
 python sim.py context.txt "Votre question ?" [--csv population_finale.csv] [--model llama3] [--output result.txt] [--limit N]
 ```
