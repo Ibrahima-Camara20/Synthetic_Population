@@ -9,7 +9,7 @@ ollama serve
 ```
 
 ## Usage
-Run `simpy` in a terminal
+Run `sim.py` in a terminal
 ```bash
 python sim.py context.txt "Votre question ?" [--csv population_finale.csv] [--model llama3] [--output result.txt] [--limit N]
 ```
