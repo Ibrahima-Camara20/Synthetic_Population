@@ -1,0 +1,148 @@
+{
+  "_avertissement": "HYPOTHESE. Les attributs fournis par le professeur sont anonymes (A0..A11, v0..v2). Cette correspondance a ete choisie pour etre coherente avec les marginales (effectifs et croisements), mais elle n'est pas donnee par les donnees. Modifier ce fichier suffit a changer l'interpretation.",
+  "attributs": {
+    "A0": {
+      "nom": "nationalite",
+      "valeurs": [
+        "etrangere hors UE",
+        "francaise",
+        "etrangere UE"
+      ]
+    },
+    "A1": {
+      "nom": "sexe",
+      "valeurs": [
+        "homme",
+        "non precise",
+        "femme"
+      ]
+    },
+    "A2": {
+      "nom": "tabac",
+      "valeurs": [
+        "fumeur",
+        "vapoteur",
+        "non-fumeur"
+      ]
+    },
+    "A3": {
+      "nom": "logement",
+      "valeurs": [
+        "proprietaire",
+        "loge gratuitement",
+        "locataire"
+      ]
+    },
+    "A4": {
+      "nom": "revenu",
+      "valeurs": [
+        "modeste",
+        "moyen",
+        "aise"
+      ]
+    },
+    "A5": {
+      "nom": "activite",
+      "valeurs": [
+        "inactif",
+        "salarie",
+        "independant"
+      ]
+    },
+    "A6": {
+      "nom": "engagement",
+      "valeurs": [
+        "militant associatif ou politique",
+        "syndique",
+        "aucun"
+      ]
+    },
+    "A7": {
+      "nom": "foyer",
+      "valeurs": [
+        "en couple",
+        "seul",
+        "famille monoparentale"
+      ]
+    },
+    "A8": {
+      "nom": "residence_secondaire",
+      "valeurs": [
+        "oui",
+        "non",
+        "sans objet"
+      ]
+    },
+    "A9": {
+      "nom": "zone",
+      "valeurs": [
+        "ville",
+        "periurbain",
+        "rural"
+      ]
+    },
+    "A10": {
+      "nom": "sante",
+      "valeurs": [
+        "probleme de sante limitant",
+        "handicap lourd",
+        "bonne sante"
+      ]
+    },
+    "A11": {
+      "nom": "age",
+      "valeurs": [
+        "18-29",
+        "30-59",
+        "60+"
+      ]
+    }
+  },
+  "regles": [
+    {
+      "nom": "un etudiant n'est pas aise",
+      "si": {
+        "A11": "18-29",
+        "A5": "inactif"
+      },
+      "interdit": {
+        "A4": "aise"
+      }
+    },
+    {
+      "nom": "un syndique n'est pas independant",
+      "si": {
+        "A6": "syndique"
+      },
+      "interdit": {
+        "A5": "independant"
+      }
+    },
+    {
+      "nom": "une personne sans emploi vivant seule n'est pas aisee",
+      "si": {
+        "A11": "30-59",
+        "A5": "inactif",
+        "A7": "seul"
+      },
+      "interdit": {
+        "A4": "aise"
+      }
+    }
+  ],
+  "justification": {
+    "A0": "11 / 461 / 28 : une tres large majorite (92 %) et deux petites categories, comme la part d'etrangers en France ; v2 est surtout masculin et plutot aise (expatries europeens)",
+    "A1": "244 / 2 / 254 : deux grandes categories equilibrees et une tres petite",
+    "A2": "94 / 8 / 398 : environ 20 % de fumeurs, surtout des hommes (72 sur 94), avec des 18-29 ans surrepresentes (31 sur 94, contre 14 % dans la population) ; v1 (8 personnes, toutes de 30 a 59 ans) correspond au vapotage",
+    "A3": "347 / 11 / 142 : environ 70 % de proprietaires, locataires surtout jeunes",
+    "A4": "99 / 313 / 88 : une classe moyenne majoritaire ; les revenus modestes sont surtout chez les 60+ (pensions)",
+    "A5": "la categorie v0 (177) contient des 18-29 ans et surtout des 60+ : etudiants et retraites, d'ou 'inactif'",
+    "A6": "27 / 19 / 454 : v1 (19) est presque entierement salarie (18 sur 19), comme l'adhesion syndicale ; v0 (27), presque uniquement masculin, correspond a un engagement militant",
+    "A7": "352 / 134 / 14 : couples, personnes seules, petite categorie monoparentale",
+    "A8": "10 / 490 / 0 : la valeur v2 n'apparait jamais ('sans objet') ; v0 (10) est surtout aise (7 sur 10) et proprietaire (8 sur 10), comme la possession d'une residence secondaire",
+    "A9": "251 / 141 / 108 : ville, periurbain, rural ; le rural est presque entierement proprietaire",
+    "A10": "48 / 4 / 448 : v0 (48) est plus age, plus souvent inactif et rarement aise, comme les problemes de sante limitants ; v1 (4) tres rare, comme le handicap lourd",
+    "A11": "70 / 261 / 169 : profil d'une pyramide des ages adultes en trois tranches"
+  },
+  "regles_justification": "Une regle n'a d'effet que si aucune table de marginales ne fixe deja ensemble ses attributs ; sinon ce sont les donnees qui decident. Les trois regles ci-dessus portent sur des combinaisons libres, et le glouton trouve toujours une population exacte avec elles."
+}

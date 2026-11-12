@@ -4,6 +4,7 @@ Population synthétique - Programme principal
 
 Chaîne rapide (par défaut) :
   Étapes 1-2 : chargement, vérificateur, bornes        (etapes_1_2.py)
+  Règles     : retrait des profils incohérents         (regles.py + attributs.json)
   Étapes 3-4 : glouton avec retour arrière -> exact    (glouton.py)
   Étape 6    : destruction-reconstruction des doublons (deduplication.py)
 
@@ -15,6 +16,7 @@ Usage :
     python main.py                      # 60 s de dé-duplication
     python main.py --temps 120          # budget de temps de l'étape 6
     python main.py --comparaison        # tableau comparatif, puis étape 6
+    python main.py --sans-regles        # ignorer les règles de cohérence
 """
 
 import argparse
@@ -26,9 +28,12 @@ import numpy as np
 from etapes_1_2 import charger_contraintes, calculer_bornes, verifier_population, K
 from glouton import preparer, glouton, population_exacte
 from deduplication import dedupliquer, reconstruire
+import regles as rg
 
-FICHIER = "constraint_cells.csv"
-OPTIMUM = 331      # maximum de personas distinctes, prouvé par solveur_reference.py
+FICHIER = "/mnt/user-data/uploads/constraint_cells.csv"
+# Maximum de personas distinctes prouvé par solveur_reference.py
+OPTIMUM_SANS_REGLES = 331
+OPTIMUM_AVEC_REGLES = 330      # avec les 3 règles de attributs.json
 
 
 def entropie(P):
@@ -70,21 +75,35 @@ def main():
                         help="affiche aussi le tableau comparatif des étapes")
     parser.add_argument("--graines", type=int, default=5,
                         help="nombre de graines du tableau comparatif")
+    parser.add_argument("--sans-regles", action="store_true",
+                        help="ne pas appliquer les règles de cohérence de attributs.json")
     args = parser.parse_args()
 
     t_total = time.perf_counter()
     with contextlib.redirect_stdout(io.StringIO()):
         tables = charger_contraintes(FICHIER)
         X, u_max, _ = calculer_bornes(tables)
+    print(f"Étapes 1-2 : {len(tables)} tables, 729 cellules, "
+          f"{len(X)} personas actives ({time.perf_counter() - t_total:.1f} s)")
+
+    # Règles de cohérence : on retire les profils incohérents, sans nouvel attribut
+    regles = [] if args.sans_regles else rg.charger_regles()
+    if regles:
+        print(f"Règles     : {len(regles)} règles de cohérence (attributs.json)")
+        X, u_max = rg.filtrer(X, u_max, regles)
+    else:
+        print("Règles     : aucune")
+    print()
     G, cibles = preparer(tables, X)
-    print(f"Étapes 1-2 : {len(tables)} tables, {len(cibles)} cellules, "
-          f"{len(X)} personas actives ({time.perf_counter() - t_total:.1f} s)\n")
 
     if args.comparaison:
         tableau_comparatif(tables, X, u_max, G, cibles, args.graines)
 
     # Étapes 3-4 : population exacte
     choix, _, retours, t4 = population_exacte(G, cibles, u_max, args.graine)
+    if choix is None:
+        raise SystemExit("Aucune population exacte trouvée : une règle contredit peut-être "
+                         "les marginales. Vérifiez attributs.json ou lancez avec --sans-regles.")
     P = X[choix].astype(np.int64)
     print(f"Étapes 3-4 : population exacte en {t4:.1f} s ({retours} retours arrière), "
           f"{len(np.unique(P, axis=0))} personas distinctes")
@@ -98,9 +117,15 @@ def main():
     print("=== Population finale ===")
     r = verifier_population(P, tables)
     assert r["valide"], "Population non exacte : bug"
+    if regles:
+        viol = rg.compter_violations(P, regles)
+        assert sum(viol.values()) == 0, f"Règle violée : {viol}"
+        print(f"  Règles respectées     : {len(regles)} / {len(regles)} (0 individu incohérent)")
     print(f"  Entropie              : {entropie(P):.2f} bits (max {np.log2(500):.2f})")
-    print(f"  Part de l'optimum     : {r['personas_distinctes']} / {OPTIMUM} "
-          f"= {100 * r['personas_distinctes'] / OPTIMUM:.0f} %")
+    optimum = OPTIMUM_AVEC_REGLES if regles else OPTIMUM_SANS_REGLES
+    if optimum:
+        print(f"  Part de l'optimum     : {r['personas_distinctes']} / {optimum} "
+              f"= {100 * r['personas_distinctes'] / optimum:.0f} %")
     print(f"  Temps total           : {time.perf_counter() - t_total:.1f} s")
     np.savetxt("population_finale.csv", P, fmt="%d", delimiter=",",
                header=",".join(f"A{i}" for i in range(K)), comments="")
