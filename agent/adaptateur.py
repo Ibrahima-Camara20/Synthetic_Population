@@ -7,6 +7,8 @@ personas.py, llm.py). Les appels sont explicites : si une fonction du projet
 change de nom ou de signature, c'est ici qu'on corrige ; serveur.py, journal.py
 et stats.py ne changent pas.
 
+Deux ou trois agents par scène en négociation (le débat se joue à deux).
+
 Deux modes de scène :
     negociation   les agents ont une marge secrète calculée depuis leur fiche, cherchent
                   une proposition commune et écrivent [ACCORD] ; le syndic peut intervenir ;
@@ -27,6 +29,8 @@ Ce que le labo reçoit de chaque scène (dictionnaire renvoyé par lancer_scene)
     hausses, plafonds                      hausse mensuelle de l'option et plafond de chaque agent
     mediateur, tour_syndic, tour_accord
     consignes                              prompts système de chaque agent (traçabilité)
+    propositions, concessions              proposition de chaque réplique ; chemin fait par chaque agent
+    chiffres, juge, valide                 montants inventés ; notes du juge ; scène crédible ou non
     controles, mal_formees, duree_s, erreur
 
 Configuration (onglet Scénario)
@@ -50,6 +54,7 @@ ICI = os.path.dirname(os.path.abspath(__file__))
 if ICI not in sys.path:
     sys.path.insert(0, ICI)
 
+import juge                            # noqa: E402
 import negociation as nego             # noqa: E402
 import personas                        # noqa: E402
 import scene                           # noqa: E402
@@ -195,78 +200,110 @@ def marge(p, cfg=None):
             "peut renoncer à": [R["postes"][x]["court"] for x in pr["sacrifiables"]]}
 
 
-def _zone_brute(a, b, cfg):
+def _zone_groupe(agents, cfg):
     R = regles(cfg)
-    pa, pb = nego.profil(a, enjeux(a, cfg), R), nego.profil(b, enjeux(b, cfg), R)
-    return nego.zone_accord(a, pa, b, pb, R), R
+    profils = [nego.profil(p, enjeux(p, cfg), R) for p in agents]
+    return nego.zone_groupe(agents, profils, R), R
+
+
+def _zone_brute(a, b, cfg):
+    return _zone_groupe([a, b], cfg)
 
 
 def zone(agents, cfg=None):
-    """Options acceptables pour les deux agents (textes), de la plus ambitieuse à la plus modeste."""
+    """Options acceptables pour tous les agents (textes), de la plus ambitieuse à la plus modeste."""
     cfg = cfg or normaliser_config()
-    if len(agents) != 2:
+    if len(agents) < 2:
         return None
-    z, R = _zone_brute(agents[0], agents[1], cfg)
+    z, R = _zone_groupe(list(agents), cfg)
     return [nego.texte_option(o, R) for o in z]
 
 
-def choisir_paire(df, graine, ids=None, cfg=None, exiger_zone=False):
-    """Paire « pour / contre » choisie parmi les meilleures (grand écart d'effort).
-    Avec exiger_zone, on essaie les graines suivantes jusqu'à une paire qui a une zone d'accord."""
+def _tiers(df, a, b, cfg, rng, exiger_zone):
+    """Un troisième agent pour la paire (a, b) : de préférence « partagé », sinon n'importe quel éligible."""
+    el = scene.eligibles(df, cfg["eligibilite"])
+    candidats = [p for _, p in el.iterrows() if int(p["id"]) not in (int(a["id"]), int(b["id"]))]
+    partages = [p for p in candidats if enjeux(p, cfg)["position"] == "partage"]
+    for groupe in (partages, candidats):
+        ordre = rng.permutation(len(groupe))
+        for k in ordre:
+            c = groupe[int(k)]
+            if not exiger_zone or _zone_groupe([a, b, c], cfg)[0]:
+                return c
+    return None
+
+
+def choisir_paire(df, graine, ids=None, cfg=None, exiger_zone=False, taille=2):
+    """Paire « pour / contre » choisie parmi les meilleures (grand écart d'effort), plus un
+    troisième agent (de préférence « partagé ») si taille = 3. Avec exiger_zone, on essaie les
+    graines suivantes jusqu'à un groupe qui a une zone d'accord."""
     cfg = cfg or normaliser_config()
     for k in range(200 if exiger_zone else 1):
+        rng = np.random.default_rng(graine + 7919 * k)
         try:
-            a, b = scene.choisir_paire(df, np.random.default_rng(graine + 7919 * k), ids,
-                                       cfg["scenario"], cfg["objectifs"], cfg["eligibilite"])
+            a, b = scene.choisir_paire(df, rng, ids, cfg["scenario"], cfg["objectifs"], cfg["eligibilite"])
         except SystemExit as e:               # scene.py arrête le programme : ici, simple erreur
             raise ValueError(str(e)) from None
-        if not exiger_zone or _zone_brute(a, b, cfg)[0]:
-            return [a, b]
-    raise ValueError("Aucune paire automatique n'a de zone d'accord avec ces marges.")
+        groupe = [a, b]
+        if taille == 3:
+            c = _tiers(df, a, b, cfg, rng, exiger_zone)
+            if c is None:
+                continue
+            groupe.append(c)
+        if not exiger_zone or _zone_groupe(groupe, cfg)[0]:
+            return groupe
+    raise ValueError("Aucun groupe automatique n'a de zone d'accord avec ces marges.")
 
 
-def tirer_groupes(df, n, graine, tirage="opposes", cfg=None):
-    """Tire n paires d'agents parmi les éligibles (une paire par scène).
+def tirer_groupes(df, n, graine, tirage="opposes", cfg=None, taille=2):
+    """Tire n groupes d'agents parmi les éligibles (un groupe par scène).
 
-    tirage = "aleatoire"     deux éligibles au hasard, quelle que soit leur position ;
-             "opposes"       un « pour » (qui commence) et un « contre » au hasard ;
-             "opposes_zone"  idem, mais seulement les paires qui ont une zone d'accord.
-    Les paires déjà tirées ne sont pas rejouées tant que c'est possible.
-    Renvoie une liste de paires d'identifiants.
+    tirage = "aleatoire"     des éligibles au hasard, quelle que soit leur position ;
+             "opposes"       un « pour » (qui commence), un « contre » (et un troisième agent) ;
+             "opposes_zone"  idem, mais seulement les groupes qui ont une zone d'accord.
+    taille = 2 ou 3. Avec 3, le troisième est de préférence « partagé ».
+    Les groupes déjà tirés ne sont pas rejoués tant que c'est possible.
+    Renvoie une liste de listes d'identifiants.
     """
     cfg = cfg or normaliser_config()
     el = scene.eligibles(df, cfg["eligibilite"])
     ids = [int(i) for i in el["id"]]
-    if len(ids) < 2:
-        raise ValueError(f"Il faut au moins 2 agents éligibles (il y en a {len(ids)} avec ce critère).")
+    if len(ids) < taille:
+        raise ValueError(f"Il faut au moins {taille} agents éligibles (il y en a {len(ids)} avec ce critère).")
     rng = np.random.default_rng(graine)
-    pour, contre = [], []
-    if tirage != "aleatoire":
-        for _, p in el.iterrows():
-            pos = enjeux(p, cfg)["position"]
-            (pour if pos == "pour" else contre if pos == "contre" else []).append(int(p["id"]))
-        if not pour or not contre:
-            raise ValueError("Aucune paire « pour / contre » parmi les agents éligibles avec ce "
-                             "scénario : choisissez le tirage « tous les éligibles ».")
-    candidats = None
-    if tirage == "opposes_zone":
-        par_id = {int(p["id"]): p for _, p in el.iterrows()}
-        candidats = [(i, j) for i in pour for j in contre if _zone_brute(par_id[i], par_id[j], cfg)[0]]
-        if not candidats:
-            raise ValueError("Aucune paire « pour / contre » n'a de zone d'accord avec ces marges.")
+    par_id = {int(p["id"]): p for _, p in el.iterrows()}
+    pos = {i: enjeux(p, cfg)["position"] for i, p in par_id.items()}
+    pour = [i for i, v in pos.items() if v == "pour"]
+    contre = [i for i, v in pos.items() if v == "contre"]
+    partage = [i for i, v in pos.items() if v == "partage"]
+    if tirage != "aleatoire" and (not pour or not contre):
+        raise ValueError("Aucune paire « pour / contre » parmi les agents éligibles avec ce "
+                         "scénario : choisissez le tirage « tous les éligibles ».")
+
+    def un_groupe():
+        if tirage == "aleatoire":
+            return [int(i) for i in rng.choice(ids, size=taille, replace=False)]
+        g = [int(rng.choice(pour)), int(rng.choice(contre))]
+        if taille == 3:
+            reste = [i for i in (partage or ids) if i not in g] or [i for i in ids if i not in g]
+            g.append(int(rng.choice(reste)))
+        return g
+
+    def a_zone(g):
+        return bool(_zone_groupe([par_id[i] for i in g], cfg)[0])
 
     groupes, vus = [], set()
     for _ in range(n):
         g = None
-        for _essai in range(200):
-            if candidats is not None:
-                g = list(candidats[int(rng.integers(len(candidats)))])
-            elif tirage == "opposes":
-                g = [int(rng.choice(pour)), int(rng.choice(contre))]
-            else:
-                g = [int(i) for i in rng.choice(ids, size=2, replace=False)]
-            if frozenset(g) not in vus:
+        for essai in range(600):
+            g = un_groupe()
+            if tirage == "opposes_zone" and not a_zone(g):
+                g = None
+                continue
+            if frozenset(g) not in vus or essai > 400:
                 break
+        if g is None:
+            raise ValueError("Aucun groupe « pour / contre » n'a de zone d'accord avec ces marges.")
         vus.add(frozenset(g))
         groupes.append(g)
     return groupes
@@ -279,30 +316,30 @@ def fiche(p):
 # ---------------------------------------------------------------------------
 # Lancer une scène
 # ---------------------------------------------------------------------------
-def _texte(x):
-    return x if isinstance(x, (str, int, float, bool, type(None))) else str(x)
-
-
 def lancer_scene(agents, backend="test", modele=None, base_url=None, tours=12,
                  temperature=0.9, max_tokens=400, sans_reflexion=True, mediateur=True,
-                 mode="negociation", config=None, rappel=None, arret=None):
+                 mode="negociation", config=None, rappel=None, arret=None,
+                 juger=False, modele_juge=None):
     """Joue une scène et renvoie le dictionnaire décrit en tête de fichier.
 
     rappel(nom, texte, accord) : appelé après chaque réplique (affichage en direct).
     arret : threading.Event ; s'il est levé, la scène s'interrompt à la réplique suivante.
+    juger : faire noter la scène par le juge (un appel de plus au modèle, ou à modele_juge).
     """
     t0 = time.perf_counter()
+    agents = list(agents)
     if mode not in MODES:
         raise ValueError(f"Mode de scène inconnu : {mode}")
-    if len(agents) != 2:
-        raise ValueError("Une scène réunit exactement deux agents.")
+    if mode == "debat" and len(agents) != 2:
+        raise ValueError("Le débat se joue à deux agents.")
+    if not 2 <= len(agents) <= 3:
+        raise ValueError("Une scène réunit deux ou trois agents.")
     cfg = config or normaliser_config()
     R = regles(cfg)
-    a, b = agents
     noms = [f"{p['prenom']} {p['nom']}" for p in agents]
     ej = [enjeux(p, cfg) for p in agents]
     res = {
-        "ids": [int(p["id"]) for p in agents], "noms": noms, "mode": mode,
+        "ids": [int(p["id"]) for p in agents], "noms": noms, "mode": mode, "taille": len(agents),
         "positions": [e["position"] for e in ej],
         "efforts_pct": [e["effort_pct"] for e in ej],
         "backend": backend, "modele": modele or "", "temperature": temperature,
@@ -312,7 +349,9 @@ def lancer_scene(agents, backend="test", modele=None, base_url=None, tours=12,
         "dialogue": [], "zone": None, "zone_taille": None, "zone_vide": None,
         "accord": None, "accord_signale": None, "proposition_finale": None, "option": None,
         "methode_extraction": None, "coherent": None, "coherent_par_agent": None,
-        "position_zone": None, "hausses": None, "plafonds": None,
+        "position_zone": None, "hausses": None, "plafonds": None, "zone_couts": None,
+        "propositions": None, "methode_propositions": None, "concessions": None,
+        "chiffres": None, "juge": None, "valide": None,
         "mediateur": False, "tour_syndic": None, "tour_accord": None, "consignes": None,
         "controles": {}, "mal_formees": 0, "duree_s": 0.0, "erreur": None,
     }
@@ -324,32 +363,42 @@ def lancer_scene(agents, backend="test", modele=None, base_url=None, tours=12,
             rappel(nom, texte, accord)
 
     try:
-        z, _ = _zone_brute(a, b, cfg)
-        pa, pb = nego.profil(a, ej[0], R), nego.profil(b, ej[1], R)
+        z, _ = _zone_groupe(agents, cfg)
+        profils = [nego.profil(p, e, R) for p, e in zip(agents, ej)]
         res.update(zone=[nego.texte_option(o, R) for o in z], zone_taille=len(z), zone_vide=not z,
-                   plafonds=[round(pa["plafond"]), round(pb["plafond"])])
+                   plafonds=[round(pr["plafond"]) for pr in profils],
+                   zone_couts=[round(min(nego.cout_annuel(o, R) for o in z)),
+                               round(max(nego.cout_annuel(o, R) for o in z))] if z else None)
 
         client = ClientLLM(backend, modele, base_url, temperature, max_tokens, sans_reflexion)
         if arret is not None and arret.is_set():
             raise Interrompu("arrêt demandé")
 
         if mode == "negociation":
-            dial, infos = nego.jouer(a, b, ej[0], ej[1], client, scene.nettoyer, cfg["scenario"],
-                                     tours, mediateur=mediateur, verbeux=False, rappel=suivre, R=R)
-            option, methode = nego.extraire_accord(client, dial, infos)
+            dial, infos = nego.jouer_groupe(agents, ej, client, scene.nettoyer, cfg["scenario"], tours,
+                                            mediateur=mediateur, verbeux=False, rappel=suivre, R=R)
             res["dialogue"] = [list(d) for d in dial]
+            option, methode = nego.extraire_accord(client, dial, infos)
             res.update(accord_signale=infos["accord_signale"], accord=option is not None,
                        mediateur=infos["syndic"], tour_syndic=infos["tour_syndic"],
                        tour_accord=infos["tour_accord"], consignes=infos["consignes"],
                        methode_extraction=methode)
             if option is not None:
-                par_agent = [bool(nego.acceptable(a, pa, option, R)), bool(nego.acceptable(b, pb, option, R))]
+                par_agent = [bool(nego.acceptable(p, pr, option, R)) for p, pr in zip(agents, profils)]
                 res.update(option={"postes": list(option[0]), "etalement_ans": option[1]},
                            proposition_finale=nego.texte_option(option, R),
                            coherent=all(par_agent), coherent_par_agent=par_agent,
                            position_zone=nego.position_dans_zone(option, z, R),
-                           hausses=[round(nego.mensuel(a, *option, R)), round(nego.mensuel(b, *option, R))])
+                           hausses=[round(nego.mensuel(p, *option, R)) for p in agents])
+            # Qui a proposé quoi, et qui a cédé
+            props, methode_p = nego.suivre_propositions(client, dial)
+            res.update(propositions=[None if o is None else {"postes": list(o[0]), "etalement_ans": o[1],
+                                                             "cout_annuel": round(nego.cout_annuel(o, R))}
+                                     for o in props],
+                       methode_propositions=methode_p,
+                       concessions=nego.concessions(agents, ej, dial, props, R, option))
         else:
+            a, b = agents
             dial, _, _ = scene.jouer_scene(a, b, client, tours, scenario=cfg["scenario"], verbeux=False,
                                            objectifs=cfg["objectifs"],
                                            rappel=lambda n, t: suivre(n, t, False))
@@ -358,8 +407,19 @@ def lancer_scene(agents, backend="test", modele=None, base_url=None, tours=12,
                                 noms[1]: scene.consigne(b, a, ej[1], cfg["scenario"])}
 
         repliques = [(n, t) for n, t, _ in res["dialogue"] if n != nego.SYNDIC]
-        res["controles"] = scene.verifier(repliques, a, b) if repliques else {}
+        if len(agents) == 2 and repliques:
+            res["controles"] = scene.verifier(repliques, agents[0], agents[1])
+        elif repliques:
+            res["controles"] = _controles_groupe(repliques, agents)
         res["mal_formees"] = sum(res["controles"].get(k, 0) for k in ("codes_attributs", "en_tant_que", "mentions_ia"))
+        res["chiffres"] = juge.verifier_chiffres(res["dialogue"], agents, ej, R)
+        if juger and res["dialogue"]:
+            try:
+                cj = ClientLLM(backend, modele_juge or modele, base_url, 0.2, 600, sans_reflexion)
+                res["juge"] = juge.juger(cj, res["dialogue"], agents, cfg["scenario"])
+            except Exception as e:                # noqa: BLE001  le juge ne doit pas faire échouer la scène
+                res["juge"] = {"erreur": f"{type(e).__name__} : {e}"}
+        res["valide"] = juge.valide(res["chiffres"], res["juge"] if res["juge"] and "erreur" not in res["juge"] else None)
     except Interrompu:
         res["erreur"] = "Interrompue"
     except ErreurLLM as e:
@@ -368,3 +428,26 @@ def lancer_scene(agents, backend="test", modele=None, base_url=None, tours=12,
         res["erreur"] = f"{type(e).__name__} : {e}"
     res["duree_s"] = round(time.perf_counter() - t0, 1)
     return res
+
+
+def _controles_groupe(repliques, agents):
+    """Contrôles de forme pour une scène à plus de deux (scene.verifier est écrit pour deux)."""
+    textes = [t for _, t in repliques]
+    tout = " ".join(textes).lower()
+    return {"repliques": len(textes),
+            "longueur_moyenne_mots": round(sum(len(t.split()) for t in textes) / len(textes), 1),
+            "codes_attributs": len(re.findall(r"\bA\d{1,2}\b", " ".join(textes))),
+            "en_tant_que": tout.count("en tant que"),
+            "mentions_ia": len(re.findall(r"\b(ia|intelligence artificielle|mod[eè]le de langage)\b", tout))}
+
+
+def juger_scene(ligne, df, backend, modele=None, base_url=None, sans_reflexion=True):
+    """Évalue après coup une scène du journal (avec le modèle donné)."""
+    agents = [agent(df, i) for i in ligne["ids"]]
+    cfg = ligne.get("config") or normaliser_config()
+    client = ClientLLM(backend, modele, base_url, 0.2, 600, sans_reflexion)
+    dial = [d if isinstance(d, (list, tuple)) else [d["locuteur"], d["texte"], False] for d in ligne["dialogue"]]
+    ev = juge.juger(client, dial, agents, cfg["scenario"])
+    R = regles(normaliser_config(cfg))
+    chiffres = ligne.get("chiffres") or juge.verifier_chiffres(dial, agents, [enjeux(p, normaliser_config(cfg)) for p in agents], R)
+    return {**ev, "chiffres": chiffres, "valide": juge.valide(chiffres, ev)}

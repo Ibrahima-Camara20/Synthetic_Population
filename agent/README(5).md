@@ -21,6 +21,8 @@ Rien à installer en plus de pandas et numpy (serveur de la bibliothèque standa
 | `negociation.py` | Moteur de négociation : postes, marges secrètes, zone d'accord, syndic, extraction et vérification de l'accord |
 | `journal.py` | Enregistre chaque scène dans `scenes/journal.jsonl` |
 | `stats.py` | Mesures, intervalles de confiance, comparaison appariée des variantes |
+| `voix.py` | Synthèse vocale ElevenLabs, réplique par réplique (avec cache) |
+| `juge.py` | Crédibilité d'une scène : montants inventés, notes d'un juge (modèle) |
 
 ## Deux modes de scène
 
@@ -45,7 +47,66 @@ Rien à installer en plus de pandas et numpy (serveur de la bibliothèque standa
 5. **Scènes jouées** : relecture, verdict, **consignes exactes envoyées aux agents**,
    zone d'accord, configuration.
 6. **Statistiques** : mesures sur tout le journal, filtrables et comparables par
-   modèle, mode, température, étiquette, variante, configuration…
+   modèle, mode, nombre d'agents, température, étiquette, variante, configuration…
+7. **Analyses** : qui concède le plus selon sa position, et corrélations entre la
+   personnalité (OCEAN) et le résultat de chaque agent.
+
+## La voix (ElevenLabs)
+
+Chaque scène peut être écoutée : bouton **Écouter la scène** au-dessus de la transcription
+(onglets Lancer et Scènes jouées). La réplique en cours est surlignée, et la suivante se
+prépare pendant la lecture. Survoler le numéro d'une réplique permet de n'écouter qu'elle.
+Une fois toute la scène écoutée, **Télécharger le MP3** donne le fichier complet.
+
+- Voix choisie selon le sexe et l'âge de l'agent (`voix.json`), voix « narrateur » pour le syndic.
+- Chaque réplique n'est synthétisée qu'une fois : elle est gardée dans `scenes/audio/`
+  (réécouter ne consomme pas de crédits).
+- La clé n'est jamais saisie dans le labo ni écrite dans un fichier `.py` (le dépôt est public).
+  Créez une fois pour toutes `agent/cle_elevenlabs.txt` contenant seulement la clé (`sk_...`) :
+  ce fichier est exclu de Git par `.gitignore`. La variable d'environnement `ELEVENLABS_API_KEY`
+  reste possible et passe en priorité.
+
+Le voyant « Voix » de la barre latérale dit si la clé et `voix.json` sont trouvés.
+« Lire chaque nouvelle scène » lance la lecture automatiquement à la fin d'une scène.
+
+## Scènes à trois agents
+
+En négociation, une scène peut réunir **trois agents** (barre latérale, « Agents par scène ») :
+un « pour », un « contre » et, de préférence, un « partagé ». Ils parlent à tour de rôle et
+voient le nom de qui parle ; la zone d'accord est l'ensemble des options acceptables pour
+**les trois** ; l'accord est conclu quand chacun l'a signalé. Le débat reste à deux.
+
+Pour comparer 2 et 3 agents, une expérience avec une variante « 2 » et une variante « 3 » :
+les groupes sont tirés à trois, et la variante à deux garde le « pour » et le « contre » du
+même groupe. La comparaison reste appariée.
+
+## Trajectoire des propositions et concessions
+
+Après chaque négociation, le secrétaire de séance (le modèle, sinon des mots-clés) note la
+proposition que chaque réplique avance ou défend. Le labo trace la **trajectoire** : coût du
+projet par an selon chaque agent, réplique après réplique, avec la zone d'accord, l'arrivée
+du syndic et l'accord final. La **concession** d'un agent est le chemin entre sa première
+proposition et l'accord, en € par an et en part du budget (un « pour » concède en baissant le
+coût, un « contre » en l'augmentant, un « partagé » dans un sens ou dans l'autre).
+
+## Personnalité et résultat (onglet Analyses)
+
+Une ligne par agent et par négociation : ses traits OCEAN, sa position, et ce qu'il en tire
+(accord, **marge préservée** = 1 − hausse retenue / plafond secret, concession). Le labo
+calcule la corrélation de chaque trait avec chaque résultat, avec son intervalle de confiance
+à 95 % (Fisher), et trace le nuage de points correspondant. Prudence : 15 corrélations sont
+testées (une ou deux peuvent paraître nettes par hasard), et la position joue aussi.
+
+## Le juge : la scène est-elle crédible ?
+
+- **Chiffres** (toujours, gratuit) : chaque montant en euros cité est comparé aux montants réels
+  (à 2 % près) ; un montant qui ne correspond à rien est compté comme inventé.
+- **Juge** (case « Faire évaluer par le juge », un appel de plus au modèle) : notes de 1 à 5 de
+  fidélité à la fiche (par agent), de cohérence et de naturel, et un commentaire. Un autre
+  modèle peut servir de juge (réglages avancés). Une scène peut être évaluée après coup depuis
+  « Scènes jouées ». Les évaluations sont rangées dans `scenes/juges.jsonl`.
+- Une scène est **valide** si aucun montant n'est inventé et, si elle a été jugée, si la
+  fidélité moyenne et la cohérence valent au moins 3. « Accords valides » ne compte que ceux-là.
 
 ## Les mesures
 

@@ -39,7 +39,9 @@ import numpy as np
 
 import adaptateur as ad
 import journal
+import juge
 import stats
+import voix
 
 ICI = os.path.dirname(os.path.abspath(__file__))
 PAGE = os.path.join(ICI, "labo.html")
@@ -51,7 +53,8 @@ COLONNES = ["id", "prenom", "nom", "age_annees", "age", "sexe_fiche", "situation
 
 TIRAGES = ("memes", "optimisees", "opposes_zone", "opposes", "aleatoire")
 REGLAGES = {"backend": str, "modele": str, "base_url": str, "tours": int, "temperature": float,
-            "max_tokens": int, "sans_reflexion": bool, "mediateur": bool, "mode": str}
+            "max_tokens": int, "sans_reflexion": bool, "mediateur": bool, "mode": str,
+            "taille": int, "juger": bool, "modele_juge": str}
 
 # ---------------------------------------------------------------------------
 # Population (chargée une fois)
@@ -110,7 +113,8 @@ def lire_reglages(r, base=None):
     """Réglages du modèle et de la scène, validés (base : valeurs par défaut)."""
     out = dict(base or {"backend": "test", "modele": None, "base_url": None, "tours": 12,
                         "temperature": 0.9, "max_tokens": 400, "sans_reflexion": True,
-                        "mediateur": True, "mode": "negociation"})
+                        "mediateur": True, "mode": "negociation", "taille": 2, "juger": False,
+                        "modele_juge": None})
     for k, typ in REGLAGES.items():
         if k in (r or {}) and r[k] is not None:
             v = r[k]
@@ -118,6 +122,11 @@ def lire_reglages(r, base=None):
                 else (typ(v) if v != "" else None)
     out["modele"] = out["modele"] or None
     out["base_url"] = out["base_url"] or None
+    out["modele_juge"] = out["modele_juge"] or None
+    if out["taille"] not in (2, 3):
+        raise ValueError("Une scène réunit deux ou trois agents.")
+    if out["mode"] == "debat" and out["taille"] != 2:
+        raise ValueError("Le débat se joue à deux agents : choisissez la négociation pour une scène à trois.")
     if out["mode"] not in ad.MODES:
         raise ValueError(f"Mode de scène inconnu : {out['mode']}")
     if out["backend"] not in ("test", "ollama", "openai", "anthropic"):
@@ -130,20 +139,22 @@ def lire_reglages(r, base=None):
 # ---------------------------------------------------------------------------
 # Plans : quelles paires jouer
 # ---------------------------------------------------------------------------
-def paires(corps, cfg, n):
-    """n paires d'agents selon le tirage demandé."""
+def paires(corps, cfg, n, taille=2):
+    """n groupes de `taille` agents selon le tirage demandé."""
     ids = [int(i) for i in corps.get("ids", [])]
     graine = int(corps.get("graine", 0))
     tirage = corps.get("mode_agents") or ("memes" if len(ids) >= 2 else "optimisees")
     if tirage not in TIRAGES:
         raise ValueError(f"Mode de tirage inconnu : {tirage}")
     if tirage == "memes":
-        if len(ids) != 2:
-            raise ValueError("Choisissez exactement deux agents, ou un tirage aléatoire.")
+        if len(ids) != taille:
+            raise ValueError(f"Choisissez exactement {taille} agents, ou un tirage aléatoire.")
         return [ids] * n, tirage
     if tirage == "optimisees":
-        return [[int(p["id"]) for p in ad.choisir_paire(DF, graine + k, cfg=cfg)] for k in range(n)], tirage
-    return ad.tirer_groupes(DF, n, graine, tirage, cfg), tirage
+        return [[int(p["id"]) for p in ad.choisir_paire(DF, graine + k, cfg=cfg, taille=taille,
+                                                        exiger_zone=taille == 3)]
+                for k in range(n)], tirage
+    return ad.tirer_groupes(DF, n, graine, tirage, cfg, taille), tirage
 
 
 def construire(corps):
@@ -153,7 +164,7 @@ def construire(corps):
     base = lire_reglages(corps.get("reglages"))
     if sorte in ("scene", "serie"):
         n = 1 if sorte == "scene" else max(1, min(500, int(corps.get("n", 10))))
-        plan, tirage = paires(corps, cfg, n)
+        plan, tirage = paires(corps, cfg, n, base["taille"])
         return [(ids, base, cfg, {"mode_agents": tirage}) for ids in plan], sorte
 
     if sorte == "experience":
@@ -165,12 +176,14 @@ def construire(corps):
             raise ValueError("Deux variantes ont le même nom.")
         n = max(1, min(200, int(corps.get("n", 10))))
         rep = max(1, min(10, int(corps.get("repetitions", 1))))
-        plan, tirage = paires(corps, cfg, n)
         vs = []
         for rang, (nom, v) in enumerate(zip(noms, variantes)):
             r = lire_reglages(v.get("reglages"), base)
             c = ad.normaliser_config({**cfg, "marges": {**cfg["marges"], **(v.get("marges") or {})}})
             vs.append((nom, r, c, {"reglages": {k: r[k] for k in REGLAGES}, "marges": c["marges"]}, rang))
+        # Les groupes sont tirés à la taille maximale ; une variante à deux agents garde les deux premiers
+        # (le « pour » et le « contre ») : la comparaison 2 contre 3 reste appariée.
+        plan, tirage = paires(corps, cfg, n, max(v[1]["taille"] for v in vs))
         exp = uuid.uuid4().hex[:6]
         rng = np.random.default_rng(int(corps.get("graine", 0)))
         travaux = []
@@ -179,7 +192,7 @@ def construire(corps):
                 ordre = rng.permutation(len(vs))          # ordre des variantes tiré au hasard
                 for j in ordre:
                     nom, r, c, desc, rang = vs[j]
-                    travaux.append((ids, r, c, {"experience": exp, "variante": nom, "variante_rang": rang,
+                    travaux.append((ids[:r["taille"]], r, c, {"experience": exp, "variante": nom, "variante_rang": rang,
                                                 "mode_agents": tirage,
                                                 "unite": f"{u + 1}-{k + 1}", "reglages_variante": desc,
                                                 "experience_nom": corps.get("nom") or f"Expérience {exp}"}))
@@ -213,8 +226,11 @@ def _executer(job_id):
                 with VERROU:
                     job["lignes"].append([nom, texte, bool(accord)])
 
-            r = ad.lancer_scene(agents, rappel=rappel, config=cfg, arret=job["arret"], **reg)
+            r = ad.lancer_scene(agents, rappel=rappel, config=cfg, arret=job["arret"],
+                                **{k: v for k, v in reg.items() if k != "taille"})
             ligne = journal.ajouter(r, serie=serie, etiquette=job["etiquette"], **extra)
+            if r.get("juge") and "erreur" not in r["juge"]:
+                juge.enregistrer(ligne["scene_id"], {**r["juge"], "chiffres": r["chiffres"], "valide": r["valide"]})
             with VERROU:
                 job["resultats"].append(propre({c: ligne.get(c) for c in RESUME}))
                 job["dernier"] = propre(ligne) if job["sorte"] == "scene" else None
@@ -227,8 +243,8 @@ def _executer(job_id):
             job["etat"] = "arrêté" if job["arret"].is_set() else "fini"
 
 
-RESUME = ["scene_id", "noms", "positions", "variante", "unite", "mode", "accord", "coherent", "mediateur",
-          "zone_vide", "zone_taille", "proposition_finale", "position_zone", "tour_accord", "duree_s", "erreur"]
+RESUME = ["scene_id", "noms", "positions", "variante", "unite", "mode", "taille", "accord", "coherent", "mediateur",
+          "zone_vide", "zone_taille", "proposition_finale", "position_zone", "tour_accord", "valide", "duree_s", "erreur"]
 
 
 def ouvrier():
@@ -268,7 +284,7 @@ def travaux_actifs():
 # ---------------------------------------------------------------------------
 # Statistiques et expériences
 # ---------------------------------------------------------------------------
-GROUPES_AUTORISES = ["modele_complet", "temperature", "etiquette", "tours_max", "mediateur_actif", "serie",
+GROUPES_AUTORISES = ["modele_complet", "taille", "valide", "temperature", "etiquette", "tours_max", "mediateur_actif", "serie",
                      "scenario_titre", "config_id", "mode_agents", "mode", "variante", "experience"]
 
 
@@ -285,16 +301,33 @@ def statistiques(q):
         if q.get(cle):
             t = t[t[col].fillna("").isin(q[cle])]
     groupe = [g for g in q.get("groupe", ["modele_complet"]) if g in GROUPES_AUTORISES and g in t.columns]
-    cols = ["scene_id", "date", "agents", "mode", "modele_complet", "temperature", "etiquette", "serie",
+    cols = ["scene_id", "date", "agents", "mode", "taille", "valide", "juge_fidelite", "juge_coherence",
+            "chiffres_inventes", "modele_complet", "temperature", "etiquette", "serie",
             "experience", "variante", "scenario_titre", "config_id", "mode_agents",
             "accord", "coherent", "mediateur", "zone_vide", "zone_taille", "position_zone", "tour_accord",
             "repliques", "mal_formees", "duree_s", "erreur", "proposition_finale"]
     return propre({
         "mesures": stats.mesures(t) if not t.empty else {},
+        "concessions": stats.concessions_par_position(t) if not t.empty else [],
         "groupes": stats.par_groupe(t, groupe) if not t.empty else [],
         "scenes": t[cols].iloc[::-1].to_dict("records") if not t.empty else [],
         "filtres": filtres,
     })
+
+
+def analyses():
+    t = journal.tableau()
+    if t.empty:
+        return {"lignes": [], "correlations": [], "concessions": []}
+    return propre(stats.analyse(t, DF))
+
+
+def juger_apres_coup(scene_id, corps):
+    s = _scene(scene_id)
+    reg = lire_reglages(corps.get("reglages"))
+    ev = ad.juger_scene(s, DF, reg["backend"], reg["modele_juge"] or reg["modele"], reg["base_url"],
+                        reg["sans_reflexion"])
+    return juge.enregistrer(scene_id, ev)
 
 
 def experiences():
@@ -322,8 +355,105 @@ def experience(e):
 
 
 # ---------------------------------------------------------------------------
+# État du modèle (indicateur de la barre latérale)
+# ---------------------------------------------------------------------------
+def etat_modele(backend, modele=None, base_url=None):
+    """Vérifie, sans lancer de scène, que le modèle choisi est joignable."""
+    import urllib.request
+    if backend == "test":
+        return {"ok": True, "message": "Mode test : répliques scriptées, sans modèle."}
+    if backend == "ollama":
+        base = (base_url or "http://localhost:11434").rstrip("/")
+        base = base[:-3] if base.endswith("/v1") else base
+        try:
+            with urllib.request.urlopen(f"{base}/api/tags", timeout=2) as r:
+                noms = [m.get("name", "") for m in json.loads(r.read()).get("models", [])]
+        except Exception:                                        # noqa: BLE001
+            return {"ok": False, "message": "Ollama ne répond pas. Lancez l'application Ollama, puis réessayez."}
+        if modele and modele not in noms and f"{modele}:latest" not in noms:
+            return {"ok": False, "message": f"Le modèle {modele} n'est pas installé. Modèles disponibles : "
+                                            + (", ".join(noms) or "aucun") + "."}
+        return {"ok": True, "message": f"Ollama répond, {modele or 'modèle'} est installé.", "modeles": noms}
+    cles = {"openai": ("LLM_API_KEY", "OPENAI_API_KEY"), "anthropic": ("LLM_API_KEY", "ANTHROPIC_API_KEY")}
+    if not any(os.environ.get(c) for c in cles.get(backend, ())):
+        return {"ok": False, "message": f"Aucune clé trouvée. Définissez {cles[backend][1]} dans le terminal "
+                                        "avant de lancer le serveur."}
+    return {"ok": True, "message": "Clé d'API trouvée dans l'environnement."}
+
+
+# ---------------------------------------------------------------------------
+# Voix (ElevenLabs) : une réplique à la fois, mise en cache dans scenes/audio/
+# ---------------------------------------------------------------------------
+AUDIO = os.path.join(ICI, "scenes", "audio")
+_VERROUS_AUDIO = {}
+
+
+def _scene(scene_id):
+    if not scene_id.isalnum():
+        raise ValueError("Identifiant de scène invalide.")
+    for s in journal.lire():
+        if s.get("scene_id") == scene_id:
+            return s
+    raise ValueError("Scène introuvable dans le journal.")
+
+
+def _repliques(s):
+    return [(d[0], d[1]) if isinstance(d, (list, tuple)) else (d["locuteur"], d["texte"]) for d in s["dialogue"]]
+
+
+def chemin_audio(scene_id, k):
+    return os.path.join(AUDIO, scene_id, f"{int(k):03d}.mp3")
+
+
+def audio_replique(scene_id, k):
+    """Synthétise (ou reprend du cache) la réplique k d'une scène du journal."""
+    s = _scene(scene_id)
+    rep = _repliques(s)
+    k = int(k)
+    if not 0 <= k < len(rep):
+        raise ValueError("Numéro de réplique invalide.")
+    personas = {f"{p['prenom']} {p['nom']}": p for p in (ad.agent(DF, i) for i in s["ids"])}
+    sortie = chemin_audio(scene_id, k)
+    verrou = _VERROUS_AUDIO.setdefault(sortie, threading.Lock())   # pas deux synthèses de la même réplique
+    with verrou:
+        try:
+            voix.synthetiser_replique(rep[k][0], rep[k][1], personas, sortie)
+        except voix.ErreurVoix as e:
+            raise ValueError(str(e)) from None
+    return {"url": f"/audio/{scene_id}/{k}.mp3", "locuteur": rep[k][0], "total": len(rep)}
+
+
+def audio_scene(scene_id):
+    """MP3 de toute la scène, assemblé à partir des répliques déjà synthétisées."""
+    s = _scene(scene_id)
+    n = len(_repliques(s))
+    chemins = [chemin_audio(scene_id, k) for k in range(n)]
+    if not all(os.path.exists(c) for c in chemins):
+        raise ValueError("Écoutez d'abord toute la scène : l'audio complet est assemblé à partir des répliques.")
+    return b"".join(open(c, "rb").read() for c in chemins)
+
+
+def audios_prets(scene_id):
+    d = os.path.join(AUDIO, scene_id)
+    return sorted(int(f[:3]) for f in os.listdir(d) if f.endswith(".mp3")) if os.path.isdir(d) else []
+
+
+# ---------------------------------------------------------------------------
 # HTTP
 # ---------------------------------------------------------------------------
+CONNEXION_COUPEE = (ConnectionAbortedError, ConnectionResetError, BrokenPipeError)
+
+
+class Serveur(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def handle_error(self, request, client_address):
+        """N'affiche pas de trace quand le navigateur coupe une connexion : c'est normal."""
+        if isinstance(sys.exc_info()[1], CONNEXION_COUPEE):
+            return
+        super().handle_error(request, client_address)
+
+
 class Gestionnaire(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -344,17 +474,45 @@ class Gestionnaire(BaseHTTPRequestHandler):
     def _erreurs(self, f):
         try:
             f()
+        except CONNEXION_COUPEE:                     # le navigateur a fermé la requête (page rechargée,
+            pass                                     # onglet fermé, rafraîchissement automatique) : sans gravité
         except ValueError as e:                      # configuration ou demande invalide
-            self._json({"erreur": str(e)}, 400)
+            self._envoyer_erreur(str(e), 400)
         except Exception as e:                       # noqa: BLE001
-            self._json({"erreur": f"{type(e).__name__} : {e}"}, 500)
+            self._envoyer_erreur(f"{type(e).__name__} : {e}", 500)
+
+    def _envoyer_erreur(self, message, code):
+        try:
+            self._json({"erreur": message}, code)
+        except CONNEXION_COUPEE:
+            pass
 
     def do_GET(self):
         u = urlparse(self.path)
         q = parse_qs(u.query)
         self._erreurs(lambda: self._get(u, q))
 
+    def _mp3(self, data, nom=None):
+        self.send_response(200)
+        self.send_header("Content-Type", "audio/mpeg")
+        self.send_header("Content-Length", str(len(data)))
+        if nom:
+            self.send_header("Content-Disposition", f'attachment; filename="{nom}"')
+        self.end_headers()
+        self.wfile.write(data)
+
     def _get(self, u, q):
+        if u.path.startswith("/audio/"):
+            morceaux = u.path.split("/")                       # /audio/<scene>/<k>.mp3 ou scene.mp3
+            if len(morceaux) != 4 or not morceaux[2].isalnum():
+                raise ValueError("Chemin audio invalide.")
+            if morceaux[3] == "scene.mp3":
+                return self._mp3(audio_scene(morceaux[2]), f"scene_{morceaux[2]}.mp3")
+            k = morceaux[3].removesuffix(".mp3")
+            if not k.isdigit() or not os.path.exists(chemin_audio(morceaux[2], k)):
+                return self._json({"erreur": "audio introuvable"}, 404)
+            with open(chemin_audio(morceaux[2], k), "rb") as f:
+                return self._mp3(f.read())
         if u.path in ("/", "/labo.html"):
             with open(PAGE, "rb") as f:
                 data = f.read()
@@ -365,14 +523,29 @@ class Gestionnaire(BaseHTTPRequestHandler):
             self.wfile.write(data)
         elif u.path == "/api/etat":
             self._json({"nb_agents": len(DF), "defaut": ad.config_defaut(), "modes": list(ad.MODES),
-                        "colonnes": ad.colonnes_info(DF), "travaux": travaux_actifs()})
+                        "colonnes": ad.colonnes_info(DF), "travaux": travaux_actifs(), "voix": voix.etat()})
+        elif u.path == "/api/voix":
+            self._json(voix.etat())
+        elif u.path.startswith("/api/audio/"):
+            self._json({"pretes": audios_prets(u.path.rsplit("/", 1)[1])})
         elif u.path.startswith("/api/job/"):
             job = JOBS.get(u.path.rsplit("/", 1)[1])
             self._json(etat_job(job) if job else {"etat": "inconnu"}, 200 if job else 404)
         elif u.path == "/api/scenes":
-            self._json(journal.lire()[::-1])
+            jugees = juge.lire()
+            scenes = journal.lire()[::-1]
+            for sc in scenes:                      # évaluation la plus récente du juge, faite pendant ou après
+                ev = jugees.get(sc["scene_id"])
+                if ev:
+                    sc["juge"], sc["valide"] = ev, ev.get("valide", sc.get("valide"))
+            self._json(scenes)
         elif u.path == "/api/stats":
             self._json(statistiques(q))
+        elif u.path == "/api/modele":
+            self._json(etat_modele((q.get("backend") or ["test"])[0], (q.get("modele") or [None])[0],
+                                   (q.get("base_url") or [None])[0]))
+        elif u.path == "/api/analyses":
+            self._json(analyses())
         elif u.path == "/api/experiences":
             self._json(experiences())
         elif u.path.startswith("/api/experience/"):
@@ -392,7 +565,8 @@ class Gestionnaire(BaseHTTPRequestHandler):
         elif u.path == "/api/paire":
             cfg = ad.normaliser_config(corps.get("config"))
             ids = [int(p["id"]) for p in ad.choisir_paire(DF, int(corps.get("graine", 0)), cfg=cfg,
-                                                          exiger_zone=bool(corps.get("exiger_zone")))]
+                                                          exiger_zone=bool(corps.get("exiger_zone")),
+                                                          taille=int(corps.get("taille", 2)))]
             self._json({"ids": ids})
         elif u.path == "/api/zone":
             cfg = ad.normaliser_config(corps.get("config"))
@@ -400,6 +574,13 @@ class Gestionnaire(BaseHTTPRequestHandler):
             self._json({"zone": ad.zone(agents, cfg) if len(agents) == 2 else None})
         elif u.path == "/api/lancer":
             self._json(lancer(corps))
+        elif u.path.startswith("/api/audio/"):
+            morceaux = u.path.split("/")                       # /api/audio/<scene>/<k>
+            if len(morceaux) != 5:
+                raise ValueError("Chemin audio invalide.")
+            self._json(audio_replique(morceaux[3], morceaux[4]))
+        elif u.path.startswith("/api/juger/"):
+            self._json(propre(juger_apres_coup(u.path.rsplit("/", 1)[1], corps)))
         elif u.path.startswith("/api/arreter/"):
             job = JOBS.get(u.path.rsplit("/", 1)[1])
             if not job:
@@ -417,7 +598,7 @@ def main():
     nombres = [a for a in sys.argv[1:] if a.isdigit()]
     port = int(nombres[0]) if nombres else 8000
     threading.Thread(target=ouvrier, daemon=True).start()
-    serveur = ThreadingHTTPServer(("127.0.0.1", port), Gestionnaire)
+    serveur = Serveur(("127.0.0.1", port), Gestionnaire)
     url = f"http://localhost:{port}"
     print(f"Labo des agents : {url}   (Ctrl+C pour arrêter)")
     if "--sans-navigateur" not in sys.argv:

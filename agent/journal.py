@@ -72,7 +72,8 @@ def tableau():
     # Colonnes absentes des anciennes scènes du journal
     for c in ("config", "config_id", "mode_agents", "mode", "experience", "variante", "unite",
               "reglages_variante", "position_zone", "coherent", "zone_vide", "tour_accord",
-              "mal_formees", "accord", "mediateur"):
+              "mal_formees", "accord", "mediateur", "taille", "chiffres", "juge", "concessions",
+              "propositions", "hausses", "plafonds"):
         if c not in df.columns:
             df[c] = None
     df["mode"] = df["mode"].fillna("ancien")
@@ -88,10 +89,36 @@ def tableau():
     df["modele_complet"] = (df["backend"] + " " + df["modele"].fillna("")).str.strip()
     df["scenario_titre"] = df["config"].apply(
         lambda c: (c.get("scenario") or {}).get("titre", "") if isinstance(c, dict) else "")
+    df["taille"] = df.apply(lambda r: r["taille"] if pd.notna(r["taille"]) else len(r["ids"]), axis=1).astype(int)
+
+    # Évaluations du juge : la plus récente de juges.jsonl, sinon celle faite pendant la scène
+    import juge
+    jugees = juge.lire()
+
+    def evaluation(r):
+        j = jugees.get(r["scene_id"]) or (r["juge"] if isinstance(r["juge"], dict) and "erreur" not in r["juge"] else None)
+        return j
+    evals = df.apply(evaluation, axis=1)
+
+    def fid(j):
+        v = [x for x in ((j or {}).get("fidelite") or {}).values() if x is not None]
+        return sum(v) / len(v) if v else None
+    df["juge_fidelite"] = evals.apply(fid)
+    df["juge_coherence"] = evals.apply(lambda j: (j or {}).get("coherence"))
+    df["juge_naturel"] = evals.apply(lambda j: (j or {}).get("naturel"))
+    df["juge_commentaire"] = evals.apply(lambda j: (j or {}).get("commentaire"))
+    df["jugee"] = evals.notna()
+    df["chiffres_inventes"] = df["chiffres"].apply(lambda c: c.get("inventes") if isinstance(c, dict) else None)
+    df["valide"] = [juge.valide(c if isinstance(c, dict) else None, j) if isinstance(c, dict) or j else None
+                    for c, j in zip(df["chiffres"], evals)]
     return df
 
 
 def vider():
-    if os.path.exists(CHEMIN):
-        with _VERROU:
-            os.replace(CHEMIN, CHEMIN + f".{datetime.now():%Y%m%d_%H%M%S}.bak")
+    """Met le journal (et les évaluations du juge) de côté dans une copie datée."""
+    import juge
+    date = f"{datetime.now():%Y%m%d_%H%M%S}"
+    with _VERROU:
+        for chemin in (CHEMIN, juge.CHEMIN):
+            if os.path.exists(chemin):
+                os.replace(chemin, f"{chemin}.{date}.bak")
