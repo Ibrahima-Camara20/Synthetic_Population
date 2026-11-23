@@ -4,14 +4,20 @@ Labo des agents - Journal des scènes
 
 Chaque scène jouée depuis le labo est ajoutée à scenes/journal.jsonl (une
 ligne JSON par scène). C'est la base de toutes les statistiques : on peut
-le relire, le filtrer, ou l'ouvrir dans pandas.
+le relire, le filtrer, ou l'ouvrir dans pandas :
 
-Chaque ligne garde aussi la configuration utilisée (scénario, objectifs,
-critère d'éligibilité) et le mode de tirage des agents, pour comparer des essais.
+    import pandas as pd
+    df = pd.read_json("scenes/journal.jsonl", lines=True)
+
+Chaque ligne garde tout ce qu'il faut pour REPRODUIRE la scène : agents,
+réglages du modèle, mode, configuration (scénario, objectifs, éligibilité,
+marges), consignes envoyées aux agents, et, pour une expérience, la variante
+et l'unité (paire + répétition) jouée.
 """
 
 import json
 import os
+import threading
 import uuid
 from datetime import datetime
 
@@ -19,6 +25,7 @@ import pandas as pd
 
 ICI = os.path.dirname(os.path.abspath(__file__))
 CHEMIN = os.path.join(ICI, "scenes", "journal.jsonl")
+_VERROU = threading.Lock()
 
 
 def _propre(x):
@@ -31,12 +38,13 @@ def _propre(x):
     return x
 
 
-def ajouter(resultat, serie=None, etiquette=""):
+def ajouter(resultat, serie=None, etiquette="", **extra):
+    """extra : experience, variante, unite, reglages_variante, mode_agents…"""
     os.makedirs(os.path.dirname(CHEMIN), exist_ok=True)
     ligne = {"scene_id": uuid.uuid4().hex[:8],
              "date": datetime.now().isoformat(timespec="seconds"),
-             "serie": serie, "etiquette": etiquette, **_propre(resultat)}
-    with open(CHEMIN, "a", encoding="utf-8") as f:
+             "serie": serie, "etiquette": etiquette, **_propre(extra), **_propre(resultat)}
+    with _VERROU, open(CHEMIN, "a", encoding="utf-8") as f:
         f.write(json.dumps(ligne, ensure_ascii=False) + "\n")
     return ligne
 
@@ -44,8 +52,15 @@ def ajouter(resultat, serie=None, etiquette=""):
 def lire():
     if not os.path.exists(CHEMIN):
         return []
-    with open(CHEMIN, encoding="utf-8") as f:
-        return [json.loads(l) for l in f if l.strip()]
+    with _VERROU, open(CHEMIN, encoding="utf-8") as f:
+        lignes = []
+        for l in f:
+            if l.strip():
+                try:
+                    lignes.append(json.loads(l))
+                except json.JSONDecodeError:          # ligne coupée (arrêt brutal) : ignorée
+                    pass
+        return lignes
 
 
 def tableau():
@@ -55,15 +70,21 @@ def tableau():
         return pd.DataFrame()
     df = pd.DataFrame(scenes)
     # Colonnes absentes des anciennes scènes du journal
-    for c in ("config", "config_id", "mode_agents"):
+    for c in ("config", "config_id", "mode_agents", "mode", "experience", "variante", "unite",
+              "reglages_variante", "position_zone", "coherent", "zone_vide", "tour_accord",
+              "mal_formees", "accord", "mediateur"):
         if c not in df.columns:
             df[c] = None
+    df["mode"] = df["mode"].fillna("ancien")
     df["agents"] = df["noms"].apply(lambda n: " / ".join(n))
-    df["nb_agents"] = df["ids"].apply(len)
     df["repliques"] = df["dialogue"].apply(len)
-    df["mal_formees"] = df["controles"].apply(
-        lambda c: sum(c.get(k, 0) for k in ("codes_attributs", "en_tant_que", "mentions_ia"))
-        if isinstance(c, dict) else 0)
+    df["mal_formees"] = df.apply(
+        lambda r: r["mal_formees"] if pd.notna(r["mal_formees"]) else
+        sum((r["controles"] or {}).get(k, 0) for k in ("codes_attributs", "en_tant_que", "mentions_ia"))
+        if isinstance(r["controles"], dict) else 0, axis=1).astype(int)
+    df["longueur_mots"] = df["controles"].apply(
+        lambda c: c.get("longueur_moyenne_mots") if isinstance(c, dict) else None)
+    df["mediateur"] = df["mediateur"].fillna(False).astype(bool)
     df["modele_complet"] = (df["backend"] + " " + df["modele"].fillna("")).str.strip()
     df["scenario_titre"] = df["config"].apply(
         lambda c: (c.get("scenario") or {}).get("titre", "") if isinstance(c, dict) else "")
@@ -72,4 +93,5 @@ def tableau():
 
 def vider():
     if os.path.exists(CHEMIN):
-        os.replace(CHEMIN, CHEMIN + f".{datetime.now():%Y%m%d_%H%M%S}.bak")
+        with _VERROU:
+            os.replace(CHEMIN, CHEMIN + f".{datetime.now():%Y%m%d_%H%M%S}.bak")

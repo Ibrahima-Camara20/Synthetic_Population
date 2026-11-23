@@ -1,452 +1,1562 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Labo des agents</title>
-<style>
-:root{
-  --papier:#f5f3ee; --carte:#fffdf9; --encre:#1c1b19; --doux:#76726a; --ligne:#e3dfd5;
-  --accent:#1f5c4a; --accent-doux:#e3eee9;
-  --pour:#2c6a99; --pour-doux:#e2edf6; --contre:#b14f37; --contre-doux:#f6e4de;
-  --partage:#9a7a22; --partage-doux:#f4ecd5; --syndic:#5d4b8a; --syndic-doux:#ebe7f4;
-  --serif: "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
-  --sans: -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
-  --mono: ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
-}
-@media (prefers-color-scheme:dark){:root{
-  --papier:#151513; --carte:#1d1d1a; --encre:#ece9e1; --doux:#9a958b; --ligne:#2e2d29;
-  --accent:#6fbf9f; --accent-doux:#1f2e28; --pour:#7fb4dc; --pour-doux:#1c2731;
-  --contre:#e08a72; --contre-doux:#33221d; --partage:#d4b25a; --partage-doux:#2e2818;
-  --syndic:#b3a2e0; --syndic-doux:#26223a;}}
-*{box-sizing:border-box}
-html,body{margin:0;height:100%}
-body{background:var(--papier);color:var(--encre);font:14px/1.5 var(--sans);display:grid;grid-template-columns:268px 1fr}
-button,input,select,textarea{font:inherit;color:inherit}
-h1,h2,h3{font-family:var(--serif);font-weight:500;letter-spacing:-.01em;margin:0}
-.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Labo des agents</title>
+  <style>
+    :root {
+      --papier: #f5f3ee;
+      --carte: #fffdf9;
+      --encre: #1c1b19;
+      --doux: #76726a;
+      --ligne: #e3dfd5;
+      --accent: #1f5c4a;
+      --accent-doux: #e3eee9;
+      --pour: #2c6a99;
+      --pour-doux: #e2edf6;
+      --contre: #b14f37;
+      --contre-doux: #f6e4de;
+      --partage: #9a7a22;
+      --partage-doux: #f4ecd5;
+      --syndic: #5d4b8a;
+      --syndic-doux: #ebe7f4;
+      --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+      --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    }
 
-/* ---------- barre latérale ---------- */
-aside{border-right:1px solid var(--ligne);padding:26px 22px;overflow:auto;height:100vh;position:sticky;top:0}
-.marque h1{font-size:23px}
-.marque p{color:var(--doux);margin:4px 0 26px;font-size:12.5px}
-nav button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:8px 10px;border-radius:8px;cursor:pointer;text-align:left;color:var(--doux)}
-nav button:hover{background:var(--carte)}
-nav button.actif{background:var(--carte);color:var(--encre);box-shadow:0 0 0 1px var(--ligne)}
-nav .num{font-family:var(--mono);font-size:11px;opacity:.6;width:18px}
-.titre-section{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--doux);margin:28px 0 10px}
-.champ{display:grid;gap:4px;margin-bottom:12px}
-.champ label{font-size:12px;color:var(--doux);display:flex;justify-content:space-between}
-input[type=text],input[type=number],select,textarea{width:100%;background:var(--carte);border:1px solid var(--ligne);border-radius:7px;padding:7px 9px;outline:none}
-textarea{resize:vertical;line-height:1.5;display:block}
-input:focus,select:focus,textarea:focus{border-color:var(--accent)}
-input[type=range]{width:100%;accent-color:var(--accent)}
-.case{display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0;cursor:pointer}
-.case input{accent-color:var(--accent)}
-.capa{font-size:12px;color:var(--doux);display:grid;gap:3px}
-.capa span::before{content:"○ ";}
-.capa span.oui{color:var(--accent)} .capa span.oui::before{content:"● "}
+    @media (prefers-color-scheme:dark) {
+      :root {
+        --papier: #151513;
+        --carte: #1d1d1a;
+        --encre: #ece9e1;
+        --doux: #9a958b;
+        --ligne: #2e2d29;
+        --accent: #6fbf9f;
+        --accent-doux: #1f2e28;
+        --pour: #7fb4dc;
+        --pour-doux: #1c2731;
+        --contre: #e08a72;
+        --contre-doux: #33221d;
+        --partage: #d4b25a;
+        --partage-doux: #2e2818;
+        --syndic: #b3a2e0;
+        --syndic-doux: #26223a;
+      }
+    }
 
-/* ---------- contenu ---------- */
-main{padding:34px 44px 60px;overflow:auto;height:100vh}
-.vue{display:none;max-width:1240px} .vue.actif{display:block}
-.entete{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:22px}
-.entete h2{font-size:30px}
-.entete p{color:var(--doux);margin:4px 0 0}
-.carte{background:var(--carte);border:1px solid var(--ligne);border-radius:12px}
-.btn{border:1px solid var(--ligne);background:var(--carte);padding:8px 14px;border-radius:8px;cursor:pointer}
-.btn:hover{border-color:var(--doux)}
-.btn.principal{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
-.btn.principal:hover{filter:brightness(1.08)}
-.btn:disabled{opacity:.45;cursor:not-allowed}
-.segment{display:inline-flex;background:var(--carte);border:1px solid var(--ligne);border-radius:9px;padding:3px}
-.segment button{border:0;background:none;padding:6px 14px;border-radius:7px;cursor:pointer;color:var(--doux)}
-.segment button.actif{background:var(--accent-doux);color:var(--accent);font-weight:500}
-.pastille{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:500}
-.pour{background:var(--pour-doux);color:var(--pour)} .contre{background:var(--contre-doux);color:var(--contre)}
-.partage{background:var(--partage-doux);color:var(--partage)}
-.vide{color:var(--doux);padding:40px;text-align:center;font-style:italic;font-family:var(--serif);font-size:16px}
-code{font-family:var(--mono);font-size:12px;background:var(--papier);border-radius:4px;padding:1px 5px}
+    * {
+      box-sizing: border-box
+    }
 
-/* ---------- population ---------- */
-.filtres{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
-.filtres input[type=text]{width:220px} .filtres select{width:auto}
-.tableau-wrap{overflow:auto;max-height:calc(100vh - 210px)}
-table{border-collapse:collapse;width:100%;font-size:13px}
-th{position:sticky;top:0;background:var(--carte);text-align:left;font-weight:500;color:var(--doux);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;border-bottom:1px solid var(--ligne);white-space:nowrap}
-td{padding:9px 12px;border-bottom:1px solid var(--ligne);white-space:nowrap}
-tbody tr{cursor:pointer} tbody tr:hover{background:var(--papier)}
-tr.choisi td{background:var(--accent-doux)}
-.ocean{display:flex;gap:3px;align-items:end;height:18px}
-.ocean i{width:6px;background:var(--accent);opacity:.75;border-radius:1px}
-.effort{display:flex;align-items:center;gap:8px}
-.effort b{display:block;height:5px;border-radius:3px;background:var(--contre);opacity:.75}
+    html,
+    body {
+      margin: 0;
+      height: 100%
+    }
 
-/* tiroir fiche */
-.tiroir{position:fixed;right:0;top:0;height:100vh;width:430px;background:var(--carte);border-left:1px solid var(--ligne);box-shadow:-20px 0 40px rgba(0,0,0,.06);padding:28px;overflow:auto;transform:translateX(100%);transition:transform .22s ease;z-index:10}
-.tiroir.ouvert{transform:none}
-.tiroir .fermer{position:absolute;right:18px;top:16px;border:0;background:none;font-size:22px;cursor:pointer;color:var(--doux)}
-pre.fiche{font-family:var(--mono);font-size:12.5px;line-height:1.6;white-space:pre-wrap;background:var(--papier);border-radius:9px;padding:14px;margin:16px 0}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}
-.kv dt{color:var(--doux)} .kv dd{margin:0}
+    body {
+      background: var(--papier);
+      color: var(--encre);
+      font: 14px/1.5 var(--sans);
+      display: grid;
+      grid-template-columns: 268px 1fr
+    }
 
-/* ---------- scénario ---------- */
-.grille-cfg{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
-.bloc-cfg{padding:20px 22px}
-.bloc-cfg h3{font-size:19px;margin-bottom:4px}
-.bloc-cfg .intro{color:var(--doux);font-size:12.5px;margin:0 0 16px}
-.bloc-cfg .champ label{font-size:12.5px}
-.aide{color:var(--doux);font-size:12px;margin-top:2px}
-.large{grid-column:1/-1}
-.ligne-deux{display:grid;grid-template-columns:1fr 150px;gap:12px}
-#cfg-elig{font-family:var(--mono);font-size:13px}
-.colonnes-dispo{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12px;color:var(--doux)}
-.colonnes-dispo span{white-space:nowrap}
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+      color: inherit
+    }
 
-/* ---------- lancer ---------- */
-.cartes-agents{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0}
-.agent{padding:16px 18px;position:relative}
-.agent h3{font-size:19px}
-.agent .sous{color:var(--doux);font-size:12.5px;margin:2px 0 10px}
-.agent .retirer{position:absolute;right:12px;top:10px;border:0;background:none;color:var(--doux);cursor:pointer;font-size:18px}
-.agent .chiffres{display:flex;gap:18px;font-size:12.5px;margin-top:10px}
-.agent .chiffres b{display:block;font-family:var(--mono);font-size:16px;font-weight:500}
-.agent .traits{font-size:12.5px;color:var(--doux);margin-top:8px;font-style:italic;white-space:normal}
-.ajout{display:flex;gap:10px;align-items:center}
-.ajout select{width:340px}
-.bandeau{display:flex;gap:12px;align-items:center;padding:12px 16px;border-radius:10px;margin-bottom:18px;font-size:13.5px}
-.bandeau.info{background:var(--accent-doux);color:var(--accent)}
-.bandeau.alerte{background:var(--contre-doux);color:var(--contre)}
-.bandeau.neutre{background:var(--carte);border:1px solid var(--ligne);color:var(--doux)}
-.barre-lancer{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-.barre-lancer select{width:auto;max-width:440px}
+    h1,
+    h2,
+    h3 {
+      font-family: var(--serif);
+      font-weight: 500;
+      letter-spacing: -.01em;
+      margin: 0
+    }
 
-.dialogue{padding:26px 28px;margin-top:20px;display:flex;flex-direction:column;gap:14px;min-height:120px}
-.replique{max-width:72%;display:flex;flex-direction:column;gap:3px;animation:entree .25s ease}
-@keyframes entree{from{opacity:0;transform:translateY(4px)}}
-.replique .qui{font-size:11.5px;color:var(--doux);font-weight:500;letter-spacing:.02em}
-.replique .bulle{padding:10px 14px;border-radius:14px;font-family:var(--serif);font-size:15.5px;line-height:1.5}
-.replique.g{align-self:flex-start} .replique.g .bulle{background:var(--pour-doux);border-top-left-radius:4px}
-.replique.d{align-self:flex-end;text-align:right} .replique.d .bulle{background:var(--contre-doux);border-top-right-radius:4px;text-align:left}
-.replique.c{align-self:center;text-align:center;max-width:80%} .replique.c .bulle{background:var(--partage-doux)}
-.replique.s{align-self:center;text-align:center;max-width:80%} .replique.s .bulle{background:var(--syndic-doux);font-style:italic}
-.accord-tag{font-family:var(--mono);font-size:11px;background:var(--accent);color:#fff;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:2px}
-.ecrit{color:var(--doux);font-style:italic;font-family:var(--serif)}
-.verdict{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
-.verdict .carte{padding:14px 16px}
-.verdict small{color:var(--doux);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em}
-.verdict div b{display:block;font-family:var(--serif);font-size:22px;font-weight:500;margin-top:2px}
-.oui{color:var(--accent)} .non{color:var(--contre)}
-.progression{height:6px;background:var(--ligne);border-radius:3px;overflow:hidden;margin:14px 0}
-.progression i{display:block;height:100%;background:var(--accent);transition:width .3s}
+    .mono {
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums
+    }
 
-/* ---------- scènes ---------- */
-.deux{display:grid;grid-template-columns:340px 1fr;gap:18px}
-.liste{max-height:calc(100vh - 170px);overflow:auto}
-.liste button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--ligne);background:none;padding:12px 16px;cursor:pointer}
-.liste button:hover{background:var(--papier)} .liste button.actif{background:var(--accent-doux)}
-.liste .l1{font-weight:500} .liste .l2{font-size:12px;color:var(--doux)}
-.point{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--ligne)}
-.point.oui{background:var(--accent)} .point.non{background:var(--contre)}
+    /* ---------- barre latérale ---------- */
+    aside {
+      border-right: 1px solid var(--ligne);
+      padding: 26px 22px;
+      overflow: auto;
+      height: 100vh;
+      position: sticky;
+      top: 0
+    }
 
-/* ---------- stats ---------- */
-.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:22px}
-.kpi{padding:16px 18px}
-.kpi small{color:var(--doux);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;display:block;min-height:30px}
-.kpi b{font-family:var(--serif);font-size:30px;font-weight:500;display:block;line-height:1.1}
-.kpi span{font-size:12px;color:var(--doux)}
-.puces{display:flex;flex-wrap:wrap;gap:6px}
-.puce{border:1px solid var(--ligne);background:var(--carte);border-radius:99px;padding:3px 11px;font-size:12.5px;cursor:pointer;color:var(--doux)}
-.puce.actif{border-color:var(--accent);background:var(--accent-doux);color:var(--accent)}
-.bloc-filtres{display:grid;grid-template-columns:auto 1fr;gap:10px 16px;align-items:center;margin-bottom:22px;font-size:13px}
-.bloc-filtres > span{color:var(--doux)}
-.barreh{display:flex;align-items:center;gap:8px}
-.barreh i{display:block;height:8px;border-radius:4px;background:var(--accent)}
-h3.sec{font-size:19px;margin:28px 0 12px}
-</style>
+    .marque h1 {
+      font-size: 23px
+    }
+
+    .marque p {
+      color: var(--doux);
+      margin: 4px 0 26px;
+      font-size: 12.5px
+    }
+
+    nav button {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      border: 0;
+      background: none;
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: left;
+      color: var(--doux)
+    }
+
+    nav button:hover {
+      background: var(--carte)
+    }
+
+    nav button.actif {
+      background: var(--carte);
+      color: var(--encre);
+      box-shadow: 0 0 0 1px var(--ligne)
+    }
+
+    nav .num {
+      font-family: var(--mono);
+      font-size: 11px;
+      opacity: .6;
+      width: 18px
+    }
+
+    .titre-section {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      color: var(--doux);
+      margin: 28px 0 10px
+    }
+
+    .champ {
+      display: grid;
+      gap: 4px;
+      margin-bottom: 12px
+    }
+
+    .champ label {
+      font-size: 12px;
+      color: var(--doux);
+      display: flex;
+      justify-content: space-between
+    }
+
+    input[type=text],
+    input[type=number],
+    select,
+    textarea {
+      width: 100%;
+      background: var(--carte);
+      border: 1px solid var(--ligne);
+      border-radius: 7px;
+      padding: 7px 9px;
+      outline: none
+    }
+
+    textarea {
+      resize: vertical;
+      line-height: 1.5;
+      display: block
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent)
+    }
+
+    input[type=range] {
+      width: 100%;
+      accent-color: var(--accent)
+    }
+
+    .case {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+      margin: 6px 0;
+      cursor: pointer
+    }
+
+    .case input {
+      accent-color: var(--accent)
+    }
+
+    .file {
+      font-size: 12px;
+      color: var(--doux);
+      padding: 9px 10px;
+      border: 1px dashed var(--ligne);
+      border-radius: 8px
+    }
+
+    .file b {
+      color: var(--encre);
+      font-weight: 500
+    }
+
+    /* ---------- contenu ---------- */
+    main {
+      padding: 34px 44px 60px;
+      overflow: auto;
+      height: 100vh
+    }
+
+    .vue {
+      display: none;
+      max-width: 1240px
+    }
+
+    .vue.actif {
+      display: block
+    }
+
+    .entete {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 22px
+    }
+
+    .entete h2 {
+      font-size: 30px
+    }
+
+    .entete p {
+      color: var(--doux);
+      margin: 4px 0 0
+    }
+
+    .carte {
+      background: var(--carte);
+      border: 1px solid var(--ligne);
+      border-radius: 12px
+    }
+
+    .btn {
+      border: 1px solid var(--ligne);
+      background: var(--carte);
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer
+    }
+
+    .btn:hover {
+      border-color: var(--doux)
+    }
+
+    .btn.principal {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 500
+    }
+
+    .btn.principal:hover {
+      filter: brightness(1.08)
+    }
+
+    .btn.danger {
+      color: var(--contre);
+      border-color: var(--contre-doux)
+    }
+
+    .btn:disabled {
+      opacity: .45;
+      cursor: not-allowed
+    }
+
+    .segment {
+      display: inline-flex;
+      background: var(--carte);
+      border: 1px solid var(--ligne);
+      border-radius: 9px;
+      padding: 3px
+    }
+
+    .segment button {
+      border: 0;
+      background: none;
+      padding: 6px 14px;
+      border-radius: 7px;
+      cursor: pointer;
+      color: var(--doux)
+    }
+
+    .segment button.actif {
+      background: var(--accent-doux);
+      color: var(--accent);
+      font-weight: 500
+    }
+
+    .pastille {
+      display: inline-block;
+      padding: 1px 9px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 500
+    }
+
+    .pour {
+      background: var(--pour-doux);
+      color: var(--pour)
+    }
+
+    .contre {
+      background: var(--contre-doux);
+      color: var(--contre)
+    }
+
+    .partage {
+      background: var(--partage-doux);
+      color: var(--partage)
+    }
+
+    .vide {
+      color: var(--doux);
+      padding: 40px;
+      text-align: center;
+      font-style: italic;
+      font-family: var(--serif);
+      font-size: 16px
+    }
+
+    code {
+      font-family: var(--mono);
+      font-size: 12px;
+      background: var(--papier);
+      border-radius: 4px;
+      padding: 1px 5px
+    }
+
+    .aide {
+      color: var(--doux);
+      font-size: 12px;
+      margin-top: 2px
+    }
+
+    /* ---------- population ---------- */
+    .filtres {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 14px
+    }
+
+    .filtres input[type=text] {
+      width: 220px
+    }
+
+    .filtres select {
+      width: auto
+    }
+
+    .tableau-wrap {
+      overflow: auto;
+      max-height: calc(100vh - 210px)
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 13px
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: var(--carte);
+      text-align: left;
+      font-weight: 500;
+      color: var(--doux);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      padding: 10px 10px;
+      border-bottom: 1px solid var(--ligne);
+      white-space: nowrap
+    }
+
+    td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--ligne);
+      white-space: nowrap
+    }
+
+    #pop-corps tr {
+      cursor: pointer
+    }
+
+    #pop-corps tr:hover {
+      background: var(--papier)
+    }
+
+    tr.choisi td {
+      background: var(--accent-doux)
+    }
+
+    .ocean {
+      display: flex;
+      gap: 3px;
+      align-items: end;
+      height: 18px
+    }
+
+    .ocean i {
+      width: 6px;
+      background: var(--accent);
+      opacity: .75;
+      border-radius: 1px
+    }
+
+    .effort {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .effort b {
+      display: block;
+      height: 5px;
+      border-radius: 3px;
+      background: var(--contre);
+      opacity: .75
+    }
+
+    /* tiroir fiche */
+    .tiroir {
+      position: fixed;
+      right: 0;
+      top: 0;
+      height: 100vh;
+      width: 430px;
+      background: var(--carte);
+      border-left: 1px solid var(--ligne);
+      box-shadow: -20px 0 40px rgba(0, 0, 0, .06);
+      padding: 28px;
+      overflow: auto;
+      transform: translateX(100%);
+      transition: transform .22s ease;
+      z-index: 10
+    }
+
+    .tiroir.ouvert {
+      transform: none
+    }
+
+    .tiroir .fermer {
+      position: absolute;
+      right: 18px;
+      top: 16px;
+      border: 0;
+      background: none;
+      font-size: 22px;
+      cursor: pointer;
+      color: var(--doux)
+    }
+
+    pre.fiche {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      background: var(--papier);
+      border-radius: 9px;
+      padding: 14px;
+      margin: 16px 0
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 4px 14px;
+      font-size: 13px
+    }
+
+    .kv dt {
+      color: var(--doux)
+    }
+
+    .kv dd {
+      margin: 0;
+      white-space: normal
+    }
+
+    /* ---------- scénario ---------- */
+    .grille-cfg {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: start
+    }
+
+    .bloc-cfg {
+      padding: 20px 22px
+    }
+
+    .bloc-cfg h3 {
+      font-size: 19px;
+      margin-bottom: 4px
+    }
+
+    .bloc-cfg .intro {
+      color: var(--doux);
+      font-size: 12.5px;
+      margin: 0 0 16px
+    }
+
+    .bloc-cfg .champ label {
+      font-size: 12.5px
+    }
+
+    .large {
+      grid-column: 1/-1
+    }
+
+    .ligne-deux {
+      display: grid;
+      grid-template-columns: 1fr 150px;
+      gap: 12px
+    }
+
+    .ligne-trois {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px
+    }
+
+    #cfg-elig {
+      font-family: var(--mono);
+      font-size: 13px
+    }
+
+    .colonnes-dispo {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 14px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--doux)
+    }
+
+    .colonnes-dispo span {
+      white-space: nowrap
+    }
+
+    .postes {
+      font-size: 13px;
+      margin-top: 6px
+    }
+
+    .postes td {
+      padding: 6px 10px
+    }
+
+    /* ---------- lancer ---------- */
+    .cartes-agents {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      margin: 18px 0
+    }
+
+    .agent {
+      padding: 16px 18px;
+      position: relative
+    }
+
+    .agent h3 {
+      font-size: 19px
+    }
+
+    .agent .sous {
+      color: var(--doux);
+      font-size: 12.5px;
+      margin: 2px 0 10px
+    }
+
+    .agent .retirer {
+      position: absolute;
+      right: 12px;
+      top: 10px;
+      border: 0;
+      background: none;
+      color: var(--doux);
+      cursor: pointer;
+      font-size: 18px
+    }
+
+    .agent .chiffres {
+      display: flex;
+      gap: 18px;
+      font-size: 12.5px;
+      margin-top: 10px;
+      flex-wrap: wrap
+    }
+
+    .agent .chiffres b {
+      display: block;
+      font-family: var(--mono);
+      font-size: 16px;
+      font-weight: 500
+    }
+
+    .agent .traits {
+      font-size: 12.5px;
+      color: var(--doux);
+      margin-top: 8px;
+      font-style: italic;
+      white-space: normal
+    }
+
+    .ajout {
+      display: flex;
+      gap: 10px;
+      align-items: center
+    }
+
+    .ajout select {
+      width: 340px
+    }
+
+    .bandeau {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-bottom: 18px;
+      font-size: 13.5px
+    }
+
+    .bandeau.info {
+      background: var(--accent-doux);
+      color: var(--accent)
+    }
+
+    .bandeau.alerte {
+      background: var(--contre-doux);
+      color: var(--contre)
+    }
+
+    .bandeau.neutre {
+      background: var(--carte);
+      border: 1px solid var(--ligne);
+      color: var(--doux)
+    }
+
+    .barre-lancer {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .barre-lancer select {
+      width: auto;
+      max-width: 460px
+    }
+
+    .dialogue {
+      padding: 26px 28px;
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 120px
+    }
+
+    .replique {
+      max-width: 72%;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      animation: entree .25s ease
+    }
+
+    @keyframes entree {
+      from {
+        opacity: 0;
+        transform: translateY(4px)
+      }
+    }
+
+    .replique .qui {
+      font-size: 11.5px;
+      color: var(--doux);
+      font-weight: 500;
+      letter-spacing: .02em
+    }
+
+    .replique .bulle {
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-family: var(--serif);
+      font-size: 15.5px;
+      line-height: 1.5
+    }
+
+    .replique.g {
+      align-self: flex-start
+    }
+
+    .replique.g .bulle {
+      background: var(--pour-doux);
+      border-top-left-radius: 4px
+    }
+
+    .replique.d {
+      align-self: flex-end;
+      text-align: right
+    }
+
+    .replique.d .bulle {
+      background: var(--contre-doux);
+      border-top-right-radius: 4px;
+      text-align: left
+    }
+
+    .replique.s {
+      align-self: center;
+      text-align: center;
+      max-width: 80%
+    }
+
+    .replique.s .bulle {
+      background: var(--syndic-doux);
+      font-style: italic
+    }
+
+    .accord-tag {
+      font-family: var(--mono);
+      font-size: 11px;
+      background: var(--accent);
+      color: #fff;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+      vertical-align: 2px;
+      font-style: normal
+    }
+
+    .ecrit {
+      color: var(--doux);
+      font-style: italic;
+      font-family: var(--serif)
+    }
+
+    .verdict {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 16px
+    }
+
+    .verdict .carte {
+      padding: 14px 16px
+    }
+
+    .verdict small {
+      color: var(--doux);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: .06em
+    }
+
+    .verdict div b {
+      display: block;
+      font-family: var(--serif);
+      font-size: 22px;
+      font-weight: 500;
+      margin-top: 2px
+    }
+
+    .verdict .detail {
+      font-size: 12px;
+      color: var(--doux);
+      margin-top: 2px
+    }
+
+    .oui {
+      color: var(--accent)
+    }
+
+    .non {
+      color: var(--contre)
+    }
+
+    .progression {
+      height: 6px;
+      background: var(--ligne);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 14px 0
+    }
+
+    .progression i {
+      display: block;
+      height: 100%;
+      background: var(--accent);
+      transition: width .3s
+    }
+
+    .jauge {
+      position: relative;
+      height: 10px;
+      background: var(--papier);
+      border: 1px solid var(--ligne);
+      border-radius: 5px;
+      margin-top: 8px
+    }
+
+    .jauge .z {
+      position: absolute;
+      top: -1px;
+      bottom: -1px;
+      background: var(--accent);
+      opacity: .22;
+      border-radius: 5px
+    }
+
+    .jauge .m {
+      position: absolute;
+      top: -4px;
+      width: 3px;
+      height: 16px;
+      border-radius: 2px
+    }
+
+    /* ---------- scènes ---------- */
+    .deux {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 18px
+    }
+
+    .liste {
+      max-height: calc(100vh - 170px);
+      overflow: auto
+    }
+
+    .liste button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      border: 0;
+      border-bottom: 1px solid var(--ligne);
+      background: none;
+      padding: 12px 16px;
+      cursor: pointer
+    }
+
+    .liste button:hover {
+      background: var(--papier)
+    }
+
+    .liste button.actif {
+      background: var(--accent-doux)
+    }
+
+    .liste .l1 {
+      font-weight: 500
+    }
+
+    .liste .l2 {
+      font-size: 12px;
+      color: var(--doux)
+    }
+
+    .point {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+      background: var(--ligne)
+    }
+
+    .point.oui {
+      background: var(--accent)
+    }
+
+    .point.non {
+      background: var(--contre)
+    }
+
+    /* ---------- stats ---------- */
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+      margin-bottom: 22px
+    }
+
+    .kpi {
+      padding: 16px 18px
+    }
+
+    .kpi small {
+      color: var(--doux);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      display: block;
+      min-height: 30px
+    }
+
+    .kpi b {
+      font-family: var(--serif);
+      font-size: 30px;
+      font-weight: 500;
+      display: block;
+      line-height: 1.1
+    }
+
+    .kpi span {
+      font-size: 12px;
+      color: var(--doux);
+      display: block;
+      margin-top: 2px
+    }
+
+    .puces {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px
+    }
+
+    .puce {
+      border: 1px solid var(--ligne);
+      background: var(--carte);
+      border-radius: 99px;
+      padding: 3px 11px;
+      font-size: 12.5px;
+      cursor: pointer;
+      color: var(--doux)
+    }
+
+    .puce.actif {
+      border-color: var(--accent);
+      background: var(--accent-doux);
+      color: var(--accent)
+    }
+
+    .bloc-filtres {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px 16px;
+      align-items: center;
+      margin-bottom: 22px;
+      font-size: 13px
+    }
+
+    .bloc-filtres>span {
+      color: var(--doux)
+    }
+
+    h3.sec {
+      font-size: 19px;
+      margin: 28px 0 12px
+    }
+
+    .ic {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .ic .piste {
+      position: relative;
+      width: 64px;
+      height: 8px;
+      background: var(--papier);
+      border: 1px solid var(--ligne);
+      border-radius: 4px;
+      flex: none
+    }
+
+    .ic .piste i {
+      position: absolute;
+      top: -1px;
+      bottom: -1px;
+      left: 0;
+      background: var(--accent);
+      border-radius: 4px;
+      opacity: .85
+    }
+
+    .ic .piste u {
+      position: absolute;
+      top: 3px;
+      height: 1.5px;
+      background: var(--encre);
+      opacity: .55
+    }
+
+    .ic .piste u::before,
+    .ic .piste u::after {
+      content: "";
+      position: absolute;
+      top: -4px;
+      width: 1.5px;
+      height: 9.5px;
+      background: var(--encre)
+    }
+
+    .ic .piste u::before {
+      left: 0
+    }
+
+    .ic .piste u::after {
+      right: 0
+    }
+
+    .ic small {
+      color: var(--doux);
+      font-size: 11.5px
+    }
+
+    .note {
+      font-size: 12.5px;
+      color: var(--doux);
+      margin: 8px 0 0;
+      max-width: 900px
+    }
+
+    /* ---------- expériences ---------- */
+    .variantes td {
+      padding: 6px 6px;
+      vertical-align: middle
+    }
+
+    .variantes input,
+    .variantes select {
+      padding: 5px 7px
+    }
+
+    .variantes input[type=number] {
+      width: 64px
+    }
+
+    .variantes .nom {
+      width: 130px
+    }
+
+    .variantes select {
+      width: auto;
+      min-width: 96px
+    }
+
+    .signif {
+      font-weight: 500
+    }
+  </style>
 </head>
+
 <body>
 
-<aside>
-  <div class="marque">
-    <h1>Labo des agents</h1>
-    <p>Population synthétique · scènes de négociation</p>
-  </div>
-  <nav>
-    <button data-vue="population" class="actif"><span class="num">01</span>Population</button>
-    <button data-vue="scenario"><span class="num">02</span>Scénario</button>
-    <button data-vue="lancer"><span class="num">03</span>Lancer</button>
-    <button data-vue="scenes"><span class="num">04</span>Scènes jouées</button>
-    <button data-vue="stats"><span class="num">05</span>Statistiques</button>
-  </nav>
-
-  <div class="titre-section">Modèle</div>
-  <div class="champ"><label>Backend</label>
-    <select id="backend"><option>test</option><option>ollama</option><option>openai</option><option>anthropic</option></select></div>
-  <div class="champ"><label>Modèle</label><input id="modele" type="text"></div>
-  <div class="champ"><label>URL de l'API <span>optionnel</span></label><input id="base_url" type="text" placeholder="https://api.mistral.ai/v1"></div>
-  <div class="champ"><label>Température <span id="v-temp" class="mono"></span></label><input id="temperature" type="range" min="0" max="1.5" step="0.1" value="0.9"></div>
-  <div class="champ"><label>Répliques max <span id="v-tours" class="mono"></span></label><input id="tours" type="range" min="4" max="30" step="2" value="12"></div>
-  <div class="champ"><label>max_tokens</label><input id="max_tokens" type="number" value="400" step="100"></div>
-  <label class="case"><input id="sans_reflexion" type="checkbox" checked>Sans réflexion (Qwen)</label>
-  <label class="case"><input id="mediateur" type="checkbox" checked>Médiateur (syndic)</label>
-  <div class="champ" style="margin-top:12px"><label>Étiquette de l'essai</label><input id="etiquette" type="text" placeholder="ex. prompt v2"></div>
-
-  <div class="titre-section">Détecté dans le projet</div>
-  <div class="capa" id="capa"></div>
-</aside>
-
-<main>
-  <!-- ======================= POPULATION ======================= -->
-  <section class="vue actif" id="v-population">
-    <div class="entete">
-      <div><h2>Population</h2><p id="pop-resume"></p></div>
-      <div class="segment" id="pop-seg"><button data-v="elig" class="actif">Éligibles</button><button data-v="tous">Tous</button></div>
+  <aside>
+    <div class="marque">
+      <h1>Labo des agents</h1>
+      <p>Population synthétique · négociation entre agents</p>
     </div>
-    <div class="filtres">
-      <input id="f-texte" type="text" placeholder="Rechercher un nom, un métier…">
-      <select id="f-revenu"><option value="">Revenu : tous</option><option>modeste</option><option>moyen</option><option>aise</option></select>
-      <select id="f-age"><option value="">Âge : tous</option><option>18-29</option><option>30-59</option><option>60+</option></select>
-      <select id="f-pos"><option value="">Position : toutes</option><option>pour</option><option>contre</option><option value="partage">partagé</option></select>
-    </div>
-    <div class="carte tableau-wrap"><table>
-      <thead><tr><th>#</th><th>Nom</th><th>Âge</th><th>Situation</th><th>Revenu</th><th>Logement</th><th>Position</th><th>Effort</th><th title="Ouverture, Conscienciosité, Extraversion, Agréabilité, Névrosisme">OCEAN</th></tr></thead>
-      <tbody id="pop-corps"></tbody>
-    </table></div>
-  </section>
+    <nav>
+      <button data-vue="population" class="actif"><span class="num">01</span>Population</button>
+      <button data-vue="scenario"><span class="num">02</span>Scénario</button>
+      <button data-vue="lancer"><span class="num">03</span>Lancer</button>
+      <button data-vue="experiences"><span class="num">04</span>Expériences</button>
+      <button data-vue="scenes"><span class="num">05</span>Scènes jouées</button>
+      <button data-vue="stats"><span class="num">06</span>Statistiques</button>
+    </nav>
 
-  <!-- ======================= SCÉNARIO ======================= -->
-  <section class="vue" id="v-scenario">
-    <div class="entete">
-      <div><h2>Scénario</h2><p id="cfg-resume">Chargement…</p></div>
-      <div style="display:flex;gap:10px;align-items:center">
-        <span class="pastille partage" id="cfg-modif" style="display:none">modifié</span>
-        <button class="btn" id="cfg-reset">Rétablir les valeurs de scene.py</button>
-      </div>
-    </div>
-    <div id="cfg-erreur"></div>
-    <div id="cfg-avertissement"></div>
-
-    <div class="grille-cfg">
-      <div class="carte bloc-cfg">
-        <h3>Situation</h3>
-        <p class="intro">Le contexte donné aux agents. Les champs sont préremplis avec les valeurs de <code>scene.py</code>.</p>
-        <div class="champ"><label for="cfg-s-titre">Titre</label><input id="cfg-s-titre" type="text"></div>
-        <div class="champ"><label for="cfg-s-lieu">Lieu</label><textarea id="cfg-s-lieu" rows="3"></textarea>
-          <div class="aide">Inséré après « Lieu : ».</div></div>
-        <div class="champ"><label for="cfg-s-projet">Projet proposé</label><textarea id="cfg-s-projet" rows="4"></textarea>
-          <div class="aide">Inséré après « Le syndic propose de ». Si vous changez le budget ci-dessous, pensez à adapter le montant écrit ici.</div></div>
-        <div class="ligne-deux">
-          <div class="champ"><label for="cfg-s-urgent">Travaux urgents</label><input id="cfg-s-urgent" type="text"></div>
-          <div class="champ"><label for="cfg-s-budget_annuel">Budget annuel (€)</label><input id="cfg-s-budget_annuel" type="number" min="1" step="1000"></div>
-        </div>
-        <div class="aide">Le budget sert au calcul de la part de chaque agent (quote-part × budget).</div>
-      </div>
-
-      <div class="carte bloc-cfg">
-        <h3>Objectifs des agents</h3>
-        <p class="intro">Le texte de la rubrique « Ton objectif », selon la position de l'agent. La position se calcule ainsi : <b>contre</b> si revenu modeste ou effort ≥ 6 %, <b>pour</b> si revenu aisé ou effort ≤ 3 %, sinon <b>partagé</b>.</p>
-        <div class="champ"><label for="cfg-o-contre"><span><span class="pastille contre">contre</span></span></label><textarea id="cfg-o-contre" rows="3"></textarea></div>
-        <div class="champ"><label for="cfg-o-pour"><span><span class="pastille pour">pour</span></span></label><textarea id="cfg-o-pour" rows="3"></textarea></div>
-        <div class="champ"><label for="cfg-o-partage"><span><span class="pastille partage">partagé</span></span></label><textarea id="cfg-o-partage" rows="3"></textarea></div>
-        <div class="champ"><label for="cfg-o-sante"><span>Nuance santé <span style="opacity:.8">(ajoutée si l'ascenseur compte pour l'agent)</span></span></label><textarea id="cfg-o-sante" rows="3"></textarea>
-          <div class="aide">À vider pour supprimer cette nuance.</div></div>
-        <div class="aide">Variables utilisables dans ces textes : <code>{urgent}</code> <code>{projet}</code> <code>{budget_annuel}</code> <code>{titre}</code> <code>{lieu}</code></div>
-      </div>
-
-      <div class="carte bloc-cfg large">
-        <h3>Critère d'éligibilité</h3>
-        <p class="intro">Qui peut être tiré ou choisi pour une scène. Une condition sur les colonnes de la population (syntaxe <code>pandas query</code> : <code>==</code>, <code>!=</code>, <code>&gt;=</code>, <code>and</code>, <code>or</code>, <code>not</code>, <code>in [...]</code>). Vide : tout le monde.</p>
-        <div class="champ"><input id="cfg-elig" type="text" spellcheck="false" autocomplete="off"></div>
-        <div class="aide">Exemple : <code>logement == "proprietaire" and zone == "ville" and age_annees &gt;= 30</code></div>
-        <div class="colonnes-dispo" id="colonnes-dispo"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ======================= LANCER ======================= -->
-  <section class="vue" id="v-lancer">
-    <div class="entete">
-      <div><h2>Lancer une scène</h2><p id="titre-scenario"></p></div>
-      <div class="segment" id="mode-seg"><button data-v="une" class="actif">Une scène</button><button data-v="serie">Série</button></div>
-    </div>
-
-    <div class="barre-lancer">
-      <div class="ajout">
-        <select id="ajout-select"></select>
-        <button class="btn" id="ajout-btn">Ajouter</button>
-      </div>
-      <span style="color:var(--doux)">ou</span>
-      <button class="btn" id="auto-btn">Paire automatique</button>
-      <span style="color:var(--doux);font-size:12.5px">graine</span>
-      <input id="graine" type="number" value="0" style="width:80px">
-    </div>
-
-    <div class="cartes-agents" id="cartes"></div>
-    <div id="zone-bandeau"></div>
-
-    <div class="barre-lancer" id="barre-serie" style="display:none;margin-bottom:12px">
-      <span>Nombre de scènes</span><input id="nb" type="number" value="10" min="1" style="width:90px">
-      <span>Agents</span>
-      <select id="mode-agents">
-        <option value="memes">Toujours les agents choisis ci-dessus</option>
-        <option value="opposes">Nouvelle paire aléatoire à chaque scène (un pour, un contre)</option>
-        <option value="aleatoire">Nouvelle paire aléatoire à chaque scène (tous les éligibles)</option>
-        <option value="optimisees">Nouvelle paire automatique optimisée (plus grand écart)</option>
+    <div class="titre-section">Scène</div>
+    <div class="champ"><label>Mode</label>
+      <select id="mode">
+        <option value="negociation">Négociation (marges, zone d'accord)</option>
+        <option value="debat">Débat (chacun campe)</option>
       </select>
-      <select id="taille" style="display:none"><option value="2">2 agents</option><option value="3">3 agents</option></select>
-      <div style="flex-basis:100%;color:var(--doux);font-size:12.5px" id="serie-aide"></div>
     </div>
-    <button class="btn principal" id="go">▶ Jouer la scène</button>
+    <label class="case"><input id="mediateur" type="checkbox" checked>Médiateur (syndic)</label>
+    <div class="champ" style="margin-top:8px"><label>Répliques max <span id="v-tours" class="mono"></span></label><input
+        id="tours" type="range" min="4" max="30" step="2" value="16"></div>
 
-    <div id="sortie"></div>
-  </section>
-
-  <!-- ======================= SCÈNES ======================= -->
-  <section class="vue" id="v-scenes">
-    <div class="entete"><div><h2>Scènes jouées</h2><p id="sc-resume"></p></div></div>
-    <div class="deux">
-      <div class="carte liste" id="sc-liste"></div>
-      <div id="sc-detail"></div>
+    <div class="titre-section">Modèle</div>
+    <div class="champ"><label>Backend</label>
+      <select id="backend">
+        <option>test</option>
+        <option>ollama</option>
+        <option>openai</option>
+        <option>anthropic</option>
+      </select>
     </div>
-  </section>
+    <div class="champ"><label>Modèle</label><input id="modele" type="text"></div>
+    <div class="champ"><label>URL de l'API <span>optionnel</span></label><input id="base_url" type="text"
+        placeholder="vide pour Ollama en local"></div>
+    <div class="champ"><label>Température <span id="v-temp" class="mono"></span></label><input id="temperature"
+        type="range" min="0" max="1.5" step="0.1" value="0.9"></div>
+    <div class="champ"><label>max_tokens</label><input id="max_tokens" type="number" value="400" step="100"></div>
+    <label class="case"><input id="sans_reflexion" type="checkbox" checked>Sans réflexion (Qwen)</label>
+    <div class="champ" style="margin-top:12px"><label>Étiquette de l'essai</label><input id="etiquette" type="text"
+        placeholder="ex. prompt v2"></div>
 
-  <!-- ======================= STATS ======================= -->
-  <section class="vue" id="v-stats">
-    <div class="entete">
-      <div><h2>Statistiques</h2><p>Sur toutes les scènes du journal</p></div>
-      <div style="display:flex;gap:8px"><button class="btn" id="csv">Exporter CSV</button><button class="btn" id="vider">Vider le journal</button></div>
-    </div>
-    <div id="st-contenu"></div>
-  </section>
-</main>
+    <div class="titre-section">File d'attente</div>
+    <div class="file" id="file">Aucun travail en cours.</div>
+  </aside>
 
-<div class="tiroir" id="tiroir"><button class="fermer" onclick="fermerTiroir()">×</button><div id="tiroir-corps"></div></div>
+  <main>
+    <!-- ======================= POPULATION ======================= -->
+    <section class="vue actif" id="v-population">
+      <div class="entete">
+        <div>
+          <h2>Population</h2>
+          <p id="pop-resume"></p>
+        </div>
+        <div class="segment" id="pop-seg"><button data-v="elig" class="actif">Éligibles</button><button
+            data-v="tous">Tous</button></div>
+      </div>
+      <div class="filtres">
+        <input id="f-texte" type="text" placeholder="Rechercher un nom, un métier…">
+        <select id="f-revenu">
+          <option value="">Revenu : tous</option>
+          <option>modeste</option>
+          <option>moyen</option>
+          <option>aise</option>
+        </select>
+        <select id="f-age">
+          <option value="">Âge : tous</option>
+          <option>18-29</option>
+          <option>30-59</option>
+          <option>60+</option>
+        </select>
+        <select id="f-pos">
+          <option value="">Position : toutes</option>
+          <option>pour</option>
+          <option>contre</option>
+          <option value="partage">partagé</option>
+        </select>
+      </div>
+      <div class="carte tableau-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Nom</th>
+              <th>Âge</th>
+              <th>Situation</th>
+              <th>Revenu</th>
+              <th>Logement</th>
+              <th>Position</th>
+              <th>Effort</th>
+              <th title="Ouverture, Conscienciosité, Extraversion, Agréabilité, Névrosisme">OCEAN</th>
+            </tr>
+          </thead>
+          <tbody id="pop-corps"></tbody>
+        </table>
+      </div>
+    </section>
 
-<script>
-const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const pct = x => x == null ? "—" : Math.round(100 * x) + " %";
-const ouinon = x => x === true ? '<span class="oui">oui</span>' : x === false ? '<span class="non">non</span>' : "—";
-const POS = {pour:"pour", contre:"contre", partage:"partagé"};
-async function api(url, corps){
-  const r = await fetch(url, corps ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(corps)} : {});
-  const j = await r.json(); if (!r.ok) throw new Error(j.erreur || r.status); return j;
-}
-const memo = { lire(k,d){ try{ return JSON.parse(localStorage.getItem("labo."+k)) ?? d }catch{ return d } },
-               ecrire(k,v){ try{ localStorage.setItem("labo."+k, JSON.stringify(v)) }catch{} } };
-const retarder = (f, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => f(...a), ms) } };
+    <!-- ======================= SCÉNARIO ======================= -->
+    <section class="vue" id="v-scenario">
+      <div class="entete">
+        <div>
+          <h2>Scénario</h2>
+          <p id="cfg-resume">Chargement…</p>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span class="pastille partage" id="cfg-modif" style="display:none">modifié</span>
+          <button class="btn" id="cfg-reset">Rétablir les valeurs du code</button>
+        </div>
+      </div>
+      <div id="cfg-erreur"></div>
 
-/* ---------- navigation ---------- */
-$$("nav button").forEach(b => b.onclick = () => montrer(b.dataset.vue));
-function montrer(v){
-  $$("nav button").forEach(b => b.classList.toggle("actif", b.dataset.vue === v));
-  $$(".vue").forEach(s => s.classList.toggle("actif", s.id === "v-" + v));
-  if (v === "scenes") chargerScenes();
-  if (v === "stats") chargerStats();
-}
+      <div class="grille-cfg">
+        <div class="carte bloc-cfg">
+          <h3>Situation</h3>
+          <p class="intro">Le contexte donné aux agents. Les champs sont préremplis avec les valeurs de
+            <code>scene.py</code>.</p>
+          <div class="champ"><label for="cfg-s-titre">Titre</label><input id="cfg-s-titre" type="text"></div>
+          <div class="champ"><label for="cfg-s-lieu">Lieu</label><textarea id="cfg-s-lieu" rows="3"></textarea></div>
+          <div class="champ"><label for="cfg-s-projet">Projet proposé <span>mode débat</span></label><textarea
+              id="cfg-s-projet" rows="3"></textarea>
+            <div class="aide">Inséré après « Le syndic propose de ». En négociation, le projet est présenté poste par
+              poste (ci-contre).</div>
+          </div>
+          <div class="ligne-deux">
+            <div class="champ"><label for="cfg-s-urgent">Travaux urgents</label><input id="cfg-s-urgent" type="text">
+            </div>
+            <div class="champ"><label for="cfg-s-budget_annuel">Budget annuel (€)</label><input id="cfg-s-budget_annuel"
+                type="number" min="1" step="1000"></div>
+          </div>
+          <div class="aide">Le budget sert au calcul de la part de chaque agent (quote-part × budget).</div>
+        </div>
 
-/* ---------- réglages du modèle ---------- */
-const DEFAUTS = {ollama:"qwen3.5:4b", openai:"gpt-4o-mini", anthropic:"claude-sonnet-5-5", test:""};
-const CHAMPS = ["backend","modele","base_url","temperature","tours","max_tokens","sans_reflexion","mediateur","etiquette"];
-function lireReglages(){ const r = {}; CHAMPS.forEach(c => { const e = $("#"+c); r[c] = e.type === "checkbox" ? e.checked : e.value }); return r }
-function majReglages(){
-  $("#v-temp").textContent = (+$("#temperature").value).toFixed(1);
-  $("#v-tours").textContent = $("#tours").value;
-  $("#modele").disabled = $("#backend").value === "test";
-  memo.ecrire("reglages", lireReglages());
-}
-(function(){ const r = memo.lire("reglages", {}); CHAMPS.forEach(c => { if (r[c] === undefined) return; const e = $("#"+c); e.type === "checkbox" ? e.checked = r[c] : e.value = r[c] }) })();
-CHAMPS.forEach(c => $("#"+c).addEventListener("input", majReglages));
-$("#backend").addEventListener("change", () => { $("#modele").value = DEFAUTS[$("#backend").value]; majReglages() });
-majReglages();
+        <div class="carte bloc-cfg">
+          <h3>Marges de négociation</h3>
+          <p class="intro">Le plafond de hausse mensuelle que chaque agent peut accepter, en % de son revenu, selon sa
+            position. C'est ce qui détermine la <b>zone d'accord</b> : plus les marges sont serrées, plus il y a de
+            paires sans accord possible.</p>
+          <div class="ligne-trois">
+            <div class="champ"><label for="cfg-m-contre"><span
+                  class="pastille contre">contre</span><span>%</span></label><input id="cfg-m-contre" type="number"
+                step="0.5" min="0.5"></div>
+            <div class="champ"><label for="cfg-m-partage"><span
+                  class="pastille partage">partagé</span><span>%</span></label><input id="cfg-m-partage" type="number"
+                step="0.5" min="0.5"></div>
+            <div class="champ"><label for="cfg-m-pour"><span
+                  class="pastille pour">pour</span><span>%</span></label><input id="cfg-m-pour" type="number" step="0.5"
+                min="0.5"></div>
+          </div>
+          <div class="aide">Postes négociables (coûts calés sur le budget annuel), payables sur 1, 2 ou 3 ans :</div>
+          <table class="postes">
+            <tbody id="cfg-postes"></tbody>
+          </table>
+        </div>
 
-/* ---------- configuration du scénario ---------- */
-// scenario, objectifs et critère d'éligibilité : préremplis avec les valeurs de scene.py (DEFAUT)
-const CFG_SCENARIO = ["titre","lieu","projet","urgent","budget_annuel"];
-const CFG_OBJECTIFS = ["contre","pour","partage","sante"];
-let DEFAUT = null, COLONNES = {}, seqCfg = 0;
+        <div class="carte bloc-cfg">
+          <h3>Objectifs des agents</h3>
+          <p class="intro">La position de départ, selon la position de l'agent : <b>contre</b> si revenu modeste ou
+            effort ≥ 6 %, <b>pour</b> si revenu aisé ou effort ≤ 3 %, sinon <b>partagé</b>.</p>
+          <div class="champ"><label for="cfg-o-contre"><span class="pastille contre">contre</span></label><textarea
+              id="cfg-o-contre" rows="3"></textarea></div>
+          <div class="champ"><label for="cfg-o-pour"><span class="pastille pour">pour</span></label><textarea
+              id="cfg-o-pour" rows="3"></textarea></div>
+          <div class="champ"><label for="cfg-o-partage"><span class="pastille partage">partagé</span></label><textarea
+              id="cfg-o-partage" rows="3"></textarea></div>
+          <div class="champ"><label for="cfg-o-sante"><span>Nuance santé <span style="opacity:.8">(si l'ascenseur compte
+                  pour l'agent)</span></span></label><textarea id="cfg-o-sante" rows="2"></textarea>
+            <div class="aide">À vider pour supprimer cette nuance.</div>
+          </div>
+          <div class="aide">Variables : <code>{urgent}</code> <code>{projet}</code> <code>{budget_annuel}</code>
+            <code>{titre}</code> <code>{lieu}</code></div>
+        </div>
 
-function ecrireConfig(c){
-  CFG_SCENARIO.forEach(k => $("#cfg-s-" + k).value = c.scenario[k] ?? "");
-  CFG_OBJECTIFS.forEach(k => $("#cfg-o-" + k).value = c.objectifs[k] ?? "");
-  $("#cfg-elig").value = c.eligibilite ?? "";
-}
-function lireConfig(){
-  if (!DEFAUT) return null;
-  return {scenario: Object.fromEntries(CFG_SCENARIO.map(k => [k, $("#cfg-s-" + k).value])),
-          objectifs: Object.fromEntries(CFG_OBJECTIFS.map(k => [k, $("#cfg-o-" + k).value])),
-          eligibilite: $("#cfg-elig").value};
-}
-function configModifiee(c){
-  const d = DEFAUT;
-  return CFG_SCENARIO.some(k => String(c.scenario[k]).trim() !== String(d.scenario[k]).trim())
-      || CFG_OBJECTIFS.some(k => c.objectifs[k].trim() !== d.objectifs[k].trim())
-      || c.eligibilite.trim() !== d.eligibilite.trim();
-}
-function dessinerColonnes(){
-  $("#colonnes-dispo").innerHTML = "<span>Colonnes :</span>" + Object.entries(COLONNES).map(([k, v]) =>
-    `<span><code>${esc(k)}</code>${v ? " " + v.map(x => esc(x)).join(" · ") : " (nombre)"}</span>`).join("");
-}
+        <div class="carte bloc-cfg">
+          <h3>Critère d'éligibilité</h3>
+          <p class="intro">Qui peut être tiré ou choisi pour une scène (syntaxe <code>pandas query</code> :
+            <code>==</code>, <code>!=</code>, <code>&gt;=</code>, <code>and</code>, <code>or</code>, <code>not</code>,
+            <code>in [...]</code>). Vide : tout le monde.</p>
+          <div class="champ"><input id="cfg-elig" type="text" spellcheck="false" autocomplete="off"></div>
+          <div class="aide">Exemple :
+            <code>logement == "proprietaire" and zone == "ville" and age_annees &gt;= 30</code></div>
+          <div class="colonnes-dispo" id="colonnes-dispo"></div>
+        </div>
+      </div>
+    </section>
 
-// Recalcule la population (éligibles, positions, efforts) avec la configuration courante
-async function appliquerConfig(){
-  const cfg = lireConfig(); if (!cfg) return;
-  const mon = ++seqCfg;
-  memo.ecrire("config", {base: DEFAUT, cfg});
-  $("#cfg-modif").style.display = configModifiee(cfg) ? "" : "none";
-  $("#titre-scenario").textContent = cfg.scenario.titre;
-  try {
-    const pop = await api("/api/population", {config: cfg});
-    if (mon !== seqCfg) return;                       // une saisie plus récente a pris le relais
-    POP = pop; PARID = {}; POP.forEach(a => PARID[a.id] = a);
-    $("#cfg-erreur").innerHTML = "";
-    choisis = choisis.filter(id => PARID[id] && PARID[id].eligible);
-    const el = POP.filter(a => a.eligible), n = p => el.filter(a => a.position === p).length;
-    $("#cfg-resume").textContent = el.length
-      ? `${el.length} agents éligibles sur ${POP.length} · ${n("pour")} pour · ${n("contre")} contre · ${n("partage")} partagés`
-      : `Aucun agent éligible sur ${POP.length}`;
-    dessinerPopulation(); remplirSelect(); dessinerChoix();
-  } catch (e) {
-    if (mon !== seqCfg) return;
-    $("#cfg-erreur").innerHTML = `<div class="bandeau alerte"><b>Configuration invalide.</b> ${esc(e.message)}</div>`;
-    $("#cfg-resume").textContent = "Les derniers réglages valides restent utilisés pour l'affichage.";
-  }
-}
-$$("#v-scenario input, #v-scenario textarea").forEach(e => e.addEventListener("input", retarder(appliquerConfig, 450)));
-$("#cfg-reset").onclick = () => { if (!DEFAUT) return; ecrireConfig(DEFAUT); appliquerConfig() };
+    <!-- ======================= LANCER ======================= -->
+    <section class="vue" id="v-lancer">
+      <div class="entete">
+        <div>
+          <h2>Lancer</h2>
+          <p id="titre-scenario"></p>
+        </div>
+        <div class="segment" id="mode-seg"><button data-v="une" class="actif">Une scène</button><button
+            data-v="serie">Série</button></div>
+      </div>
 
-/* ---------- état ---------- */
-let POP = [], PARID = {}, CAPA = {}, choisis = [], modeSerie = false, modeManuel = false;
+      <div class="barre-lancer">
+        <div class="ajout">
+          <select id="ajout-select"></select>
+          <button class="btn" id="ajout-btn">Ajouter</button>
+        </div>
+        <span style="color:var(--doux)">ou</span>
+        <button class="btn" id="auto-btn">Paire automatique</button>
+        <span style="color:var(--doux);font-size:12.5px">graine</span>
+        <input id="graine" type="number" value="0" style="width:80px">
+      </div>
 
-api("/api/etat").then(async e => {
-  CAPA = e.capacites; DEFAUT = e.defaut; COLONNES = e.colonnes || {};
-  const noms = {zone_accord:"zone d'accord", verification_marges:"vérification des marges", marge_secrete:"marge secrète", mediateur:"médiateur", trois_agents:"trois agents", scenario_modifiable:"scénario modifiable"};
-  $("#capa").innerHTML = Object.entries(CAPA).map(([k,v]) => `<span class="${v?"oui":""}">${noms[k]||k}</span>`).join("");
-  if (!CAPA.mediateur) { $("#mediateur").disabled = true; $("#mediateur").parentElement.style.opacity = .5 }
-  if (!CAPA.scenario_modifiable)
-    $("#cfg-avertissement").innerHTML = `<div class="bandeau alerte">Cette version de <code>scene.py</code> ne prend pas encore en charge le scénario et les objectifs modifiables : seul le critère d'éligibilité sera appliqué.</div>`;
-  // Les modifications enregistrées ne sont reprises que si scene.py n'a pas changé depuis
-  const sauve = memo.lire("config", null);
-  ecrireConfig(sauve && JSON.stringify(sauve.base) === JSON.stringify(DEFAUT) ? sauve.cfg : DEFAUT);
-  dessinerColonnes();
-  await appliquerConfig();
-});
+      <div class="cartes-agents" id="cartes"></div>
+      <div id="zone-bandeau"></div>
 
-/* ---------- population ---------- */
-let popVue = "elig";
-$$("#pop-seg button").forEach(b => b.onclick = () => { $$("#pop-seg button").forEach(x => x.classList.toggle("actif", x === b)); popVue = b.dataset.v; dessinerPopulation() });
-["#f-texte","#f-revenu","#f-age","#f-pos"].forEach(s => $(s).addEventListener("input", dessinerPopulation));
+      <div class="barre-lancer" id="barre-serie" style="display:none;margin-bottom:12px">
+        <span>Nombre de scènes</span><input id="nb" type="number" value="10" min="1" style="width:90px">
+        <span>Agents</span>
+        <select id="mode-agents"></select>
+        <div style="flex-basis:100%;color:var(--doux);font-size:12.5px" id="serie-aide"></div>
+      </div>
+      <div class="barre-lancer">
+        <button class="btn principal" id="go">▶ Jouer la scène</button>
+        <button class="btn danger" id="stop" style="display:none">■ Arrêter</button>
+      </div>
 
-function ocean(a){
-  return `<div class="ocean">${["ouverture","conscienciosite","extraversion","agreabilite","nevrosisme"].map(t => `<i style="height:${Math.max(2,(a[t]-1)/4*18)}px" title="${t} ${a[t]}"></i>`).join("")}</div>`;
-}
-function dessinerPopulation(){
-  const t = $("#f-texte").value.toLowerCase(), rv = $("#f-revenu").value, ag = $("#f-age").value, ps = $("#f-pos").value;
-  const l = POP.filter(a => (popVue === "tous" || a.eligible) && (!rv || a.revenu === rv) && (!ag || a.age === ag) && (!ps || a.position === ps)
-     && (!t || `${a.prenom} ${a.nom} ${a.situation}`.toLowerCase().includes(t)));
-  $("#pop-resume").textContent = `${l.length} agents affichés sur ${POP.length}`;
-  $("#pop-corps").innerHTML = l.map(a => `<tr data-id="${a.id}" class="${choisis.includes(a.id)?"choisi":""}">
+      <div id="sortie"></div>
+    </section>
+
+    <!-- ======================= EXPÉRIENCES ======================= -->
+    <section class="vue" id="v-experiences">
+      <div class="entete">
+        <div>
+          <h2>Expériences</h2>
+          <p>Comparer des réglages sur les <b>mêmes</b> paires d'agents</p>
+        </div>
+      </div>
+      <div class="carte" style="padding:20px 22px">
+        <p class="note" style="margin:0 0 14px">Chaque variante joue toutes les paires tirées (et chaque paire autant de
+          fois que demandé), dans un ordre tiré au hasard. Comme les agents sont les mêmes, la différence entre deux
+          variantes vient des réglages et pas des agents. La première variante sert de <b>référence</b>.</p>
+        <div class="barre-lancer" style="margin-bottom:14px">
+          <span>Nom</span><input id="ex-nom" type="text" placeholder="ex. effet du médiateur" style="width:190px">
+          <span>Paires</span><input id="ex-n" type="number" value="10" min="1" max="200" style="width:70px">
+          <span>Répétitions</span><input id="ex-rep" type="number" value="1" min="1" max="10" style="width:70px">
+          <span>Agents</span><select id="ex-tirage"></select>
+          <span>graine</span><input id="ex-graine" type="number" value="0" style="width:64px">
+        </div>
+        <div style="overflow:auto">
+          <table class="variantes">
+            <thead>
+              <tr>
+                <th>Variante</th>
+                <th>Mode</th>
+                <th>Backend</th>
+                <th>Modèle</th>
+                <th>T°</th>
+                <th>Répliques</th>
+                <th>Syndic</th>
+                <th>Marge contre %</th>
+                <th>partagé %</th>
+                <th>pour %</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="ex-variantes"></tbody>
+          </table>
+        </div>
+        <div class="barre-lancer" style="margin-top:12px">
+          <button class="btn" id="ex-ajout">+ Variante</button>
+          <span class="aide" id="ex-total" style="margin:0"></span>
+          <span style="flex:1"></span>
+          <button class="btn danger" id="ex-stop" style="display:none">■ Arrêter</button>
+          <button class="btn principal" id="ex-go">▶ Lancer l'expérience</button>
+        </div>
+        <div id="ex-progression"></div>
+      </div>
+
+      <h3 class="sec">Résultats</h3>
+      <div class="barre-lancer" style="margin-bottom:12px"><select id="ex-liste"></select><button class="btn"
+          id="ex-csv">Exporter CSV</button></div>
+      <div id="ex-resultats"></div>
+    </section>
+
+    <!-- ======================= SCÈNES ======================= -->
+    <section class="vue" id="v-scenes">
+      <div class="entete">
+        <div>
+          <h2>Scènes jouées</h2>
+          <p id="sc-resume"></p>
+        </div>
+      </div>
+      <div class="deux">
+        <div class="carte liste" id="sc-liste"></div>
+        <div id="sc-detail"></div>
+      </div>
+    </section>
+
+    <!-- ======================= STATS ======================= -->
+    <section class="vue" id="v-stats">
+      <div class="entete">
+        <div>
+          <h2>Statistiques</h2>
+          <p>Sur les scènes du journal · intervalles de confiance à 95 %</p>
+        </div>
+        <div style="display:flex;gap:8px"><button class="btn" id="csv">Exporter CSV</button><button class="btn"
+            id="vider">Vider le journal</button></div>
+      </div>
+      <div id="st-contenu"></div>
+    </section>
+  </main>
+
+  <div class="tiroir" id="tiroir"><button class="fermer" onclick="fermerTiroir()">×</button>
+    <div id="tiroir-corps"></div>
+  </div>
+
+  <script>
+    const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+    const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const pct = x => x == null ? "—" : Math.round(100 * x) + " %";
+    const ouinon = x => x === true ? '<span class="oui">oui</span>' : x === false ? '<span class="non">non</span>' : "—";
+    const POS = { pour: "pour", contre: "contre", partage: "partagé" };
+    const MODES = { negociation: "négociation", debat: "débat", ancien: "ancien" };
+    const TIRAGES = {
+      memes: ["Toujours les agents choisis ci-dessus", "Les agents choisis rejouent la scène à chaque fois : on mesure la variabilité du modèle."],
+      opposes_zone: ["Paire aléatoire « pour / contre » avec zone d'accord", "Un agent « pour » (qui commence) et un « contre », tirés parmi les paires où un accord est possible : la condition pour tester la convergence."],
+      opposes: ["Paire aléatoire « pour / contre »", "Un « pour » et un « contre » au hasard, que la zone d'accord existe ou non : les paires sans zone servent de contrôle (l'accord doit y rester à 0 %)."],
+      aleatoire: ["Paire aléatoire parmi tous les éligibles", "Deux éligibles au hasard, quelle que soit leur position."],
+      optimisees: ["Paire automatique optimisée (plus grand écart)", "La paire automatique (grand écart d'effort, faible agréabilité) pour la graine, la graine + 1…"]
+    };
+    async function api(url, corps) {
+      const r = await fetch(url, corps ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) } : {});
+      const j = await r.json(); if (!r.ok) throw new Error(j.erreur || r.status); return j;
+    }
+    const memo = {
+      lire(k, d) { try { return JSON.parse(localStorage.getItem("labo." + k)) ?? d } catch { return d } },
+      ecrire(k, v) { try { localStorage.setItem("labo." + k, JSON.stringify(v)) } catch { } }
+    };
+    const retarder = (f, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => f(...a), ms) } };
+    const pause = ms => new Promise(r => setTimeout(r, ms));
+
+    /* Proportion avec intervalle de confiance : barre + [bas–haut] + effectif */
+    function ic(m, cible) {
+      if (!m) return '<span style="color:var(--doux)">—</span>';
+      return `<div class="ic"><span class="piste"><i style="width:${100 * m.p}%"></i><u style="left:${100 * m.bas}%;width:${100 * (m.haut - m.bas)}%"></u></span>
+    <span><span class="mono">${pct(m.p)}</span><small class="mono" style="display:block;line-height:1.2">[${Math.round(100 * m.bas)}–${Math.round(100 * m.haut)}] ${m.k}/${m.n}</small></span></div>`;
+    }
+    const moy = (m, f = x => x.toFixed(2), u = "") => m ? `<span class="mono">${f(m.moy)}${u}</span> <small style="color:var(--doux)" class="mono">± ${f(m.et)} · n=${m.n}</small>` : "—";
+
+    /* ---------- navigation ---------- */
+    $$("nav button").forEach(b => b.onclick = () => montrer(b.dataset.vue));
+    function montrer(v) {
+      $$("nav button").forEach(b => b.classList.toggle("actif", b.dataset.vue === v));
+      $$(".vue").forEach(s => s.classList.toggle("actif", s.id === "v-" + v));
+      if (v === "scenes") chargerScenes();
+      if (v === "stats") chargerStats();
+      if (v === "experiences") chargerExperiences();
+    }
+
+    /* ---------- réglages ---------- */
+    const DEFAUTS = { ollama: "qwen3.5:4b", openai: "gpt-4o-mini", anthropic: "claude-sonnet-5-5", test: "" };
+    const CHAMPS = ["mode", "backend", "modele", "base_url", "temperature", "tours", "max_tokens", "sans_reflexion", "mediateur", "etiquette"];
+    function lireReglages() { const r = {}; CHAMPS.forEach(c => { const e = $("#" + c); r[c] = e.type === "checkbox" ? e.checked : e.value }); return r }
+    function majReglages() {
+      $("#v-temp").textContent = (+$("#temperature").value).toFixed(1);
+      $("#v-tours").textContent = $("#tours").value;
+      $("#modele").disabled = $("#backend").value === "test";
+      $("#mediateur").disabled = $("#mode").value !== "negociation";
+      $("#mediateur").parentElement.style.opacity = $("#mediateur").disabled ? .5 : 1;
+      memo.ecrire("reglages", lireReglages());
+    }
+    (function () { const r = memo.lire("reglages", {}); CHAMPS.forEach(c => { if (r[c] === undefined) return; const e = $("#" + c); e.type === "checkbox" ? e.checked = r[c] : e.value = r[c] }) })();
+    CHAMPS.forEach(c => $("#" + c).addEventListener("input", majReglages));
+    $("#backend").addEventListener("change", () => { $("#modele").value = DEFAUTS[$("#backend").value]; majReglages() });
+    $("#mode").addEventListener("change", () => { majReglages(); dessinerChoix() });
+    majReglages();
+
+    /* ---------- configuration du scénario ---------- */
+    const CFG_SCENARIO = ["titre", "lieu", "projet", "urgent", "budget_annuel"];
+    const CFG_OBJECTIFS = ["contre", "pour", "partage", "sante"];
+    const CFG_MARGES = ["contre", "partage", "pour"];
+    const PARTS = { urgent: [4, "réparations urgentes"], hall: [8, "rénovation du hall"], ascenseur: [15, "nouvel ascenseur"], visiophone: [3, "visiophone"] };
+    let DEFAUT = null, COLONNES = {}, seqCfg = 0;
+
+    function ecrireConfig(c) {
+      CFG_SCENARIO.forEach(k => $("#cfg-s-" + k).value = c.scenario[k] ?? "");
+      CFG_OBJECTIFS.forEach(k => $("#cfg-o-" + k).value = c.objectifs[k] ?? "");
+      CFG_MARGES.forEach(k => $("#cfg-m-" + k).value = (c.marges || DEFAUT.marges)[k] ?? "");
+      $("#cfg-elig").value = c.eligibilite ?? "";
+    }
+    function lireConfig() {
+      if (!DEFAUT) return null;
+      return {
+        scenario: Object.fromEntries(CFG_SCENARIO.map(k => [k, $("#cfg-s-" + k).value])),
+        objectifs: Object.fromEntries(CFG_OBJECTIFS.map(k => [k, $("#cfg-o-" + k).value])),
+        marges: Object.fromEntries(CFG_MARGES.map(k => [k, $("#cfg-m-" + k).value])),
+        eligibilite: $("#cfg-elig").value
+      };
+    }
+    function configModifiee(c) {
+      const d = DEFAUT;
+      return CFG_SCENARIO.some(k => String(c.scenario[k]).trim() !== String(d.scenario[k]).trim())
+        || CFG_OBJECTIFS.some(k => c.objectifs[k].trim() !== d.objectifs[k].trim())
+        || CFG_MARGES.some(k => +c.marges[k] !== +d.marges[k])
+        || c.eligibilite.trim() !== d.eligibilite.trim();
+    }
+    function dessinerPostes() {
+      const budget = +$("#cfg-s-budget_annuel").value || 0, total = Object.values(PARTS).reduce((s, p) => s + p[0], 0);
+      $("#cfg-postes").innerHTML = Object.values(PARTS).map(([part, nom]) =>
+        `<tr><td>${nom}</td><td class="mono" style="text-align:right">${Math.round(budget * part / total).toLocaleString("fr-FR")} €</td></tr>`).join("");
+    }
+    function dessinerColonnes() {
+      $("#colonnes-dispo").innerHTML = "<span>Colonnes :</span>" + Object.entries(COLONNES).map(([k, v]) =>
+        `<span><code>${esc(k)}</code>${v ? " " + v.map(x => esc(x)).join(" · ") : " (nombre)"}</span>`).join("");
+    }
+
+    async function appliquerConfig() {
+      const cfg = lireConfig(); if (!cfg) return;
+      const mon = ++seqCfg;
+      memo.ecrire("config", { base: DEFAUT, cfg });
+      $("#cfg-modif").style.display = configModifiee(cfg) ? "" : "none";
+      $("#titre-scenario").textContent = cfg.scenario.titre;
+      dessinerPostes();
+      try {
+        const pop = await api("/api/population", { config: cfg });
+        if (mon !== seqCfg) return;
+        POP = pop; PARID = {}; POP.forEach(a => PARID[a.id] = a);
+        $("#cfg-erreur").innerHTML = "";
+        choisis = choisis.filter(id => PARID[id] && PARID[id].eligible);
+        const el = POP.filter(a => a.eligible), n = p => el.filter(a => a.position === p).length;
+        $("#cfg-resume").textContent = el.length
+          ? `${el.length} agents éligibles sur ${POP.length} · ${n("pour")} pour · ${n("contre")} contre · ${n("partage")} partagés`
+          : `Aucun agent éligible sur ${POP.length}`;
+        dessinerPopulation(); remplirSelect(); dessinerChoix();
+      } catch (e) {
+        if (mon !== seqCfg) return;
+        $("#cfg-erreur").innerHTML = `<div class="bandeau alerte"><b>Configuration invalide.</b> ${esc(e.message)}</div>`;
+        $("#cfg-resume").textContent = "Les derniers réglages valides restent utilisés pour l'affichage.";
+      }
+    }
+    $$("#v-scenario input, #v-scenario textarea").forEach(e => e.addEventListener("input", retarder(appliquerConfig, 450)));
+    $("#cfg-reset").onclick = () => { if (!DEFAUT) return; ecrireConfig(DEFAUT); appliquerConfig() };
+
+    /* ---------- état ---------- */
+    let POP = [], PARID = {}, choisis = [], modeSerie = false, modeManuel = false, JOB = null;
+
+    ["#mode-agents", "#ex-tirage"].forEach(s => $(s).innerHTML = Object.entries(TIRAGES).map(([k, [t]]) => `<option value="${k}">${t}</option>`).join(""));
+    $("#ex-tirage").value = "opposes_zone";
+
+    api("/api/etat").then(async e => {
+      DEFAUT = e.defaut; COLONNES = e.colonnes || {};
+      const sauve = memo.lire("config", null);
+      ecrireConfig(sauve && JSON.stringify(sauve.base) === JSON.stringify(DEFAUT) ? sauve.cfg : DEFAUT);
+      dessinerColonnes();
+      await appliquerConfig();
+      initVariantes();
+    });
+
+    /* file d'attente : rafraîchie en continu */
+    async function majFile() {
+      try {
+        const e = await api("/api/etat");
+        const t = e.travaux;
+        $("#file").innerHTML = t.length ? t.map(x => `<div><b>${{ scene: "Scène", serie: "Série", experience: "Expérience" }[x.sorte]}</b> · ${x.etat} · <span class="mono">${x.fait}/${x.total}</span></div>`).join("") : "Aucun travail en cours.";
+      } catch { }
+      setTimeout(majFile, 2500);
+    }
+    majFile();
+
+    /* ---------- population ---------- */
+    let popVue = "elig";
+    $$("#pop-seg button").forEach(b => b.onclick = () => { $$("#pop-seg button").forEach(x => x.classList.toggle("actif", x === b)); popVue = b.dataset.v; dessinerPopulation() });
+    ["#f-texte", "#f-revenu", "#f-age", "#f-pos"].forEach(s => $(s).addEventListener("input", dessinerPopulation));
+
+    function ocean(a) {
+      return `<div class="ocean">${["ouverture", "conscienciosite", "extraversion", "agreabilite", "nevrosisme"].map(t => `<i style="height:${Math.max(2, (a[t] - 1) / 4 * 18)}px" title="${t} ${a[t]}"></i>`).join("")}</div>`;
+    }
+    function dessinerPopulation() {
+      const t = $("#f-texte").value.toLowerCase(), rv = $("#f-revenu").value, ag = $("#f-age").value, ps = $("#f-pos").value;
+      const l = POP.filter(a => (popVue === "tous" || a.eligible) && (!rv || a.revenu === rv) && (!ag || a.age === ag) && (!ps || a.position === ps)
+        && (!t || `${a.prenom} ${a.nom} ${a.situation}`.toLowerCase().includes(t)));
+      $("#pop-resume").textContent = `${l.length} agents affichés sur ${POP.length}`;
+      $("#pop-corps").innerHTML = l.map(a => `<tr data-id="${a.id}" class="${choisis.includes(a.id) ? "choisi" : ""}">
     <td class="mono" style="color:var(--doux)">${a.id}</td>
     <td><b style="font-weight:500">${esc(a.prenom)} ${esc(a.nom)}</b></td>
     <td class="mono">${a.age_annees}</td>
@@ -454,14 +1564,14 @@ function dessinerPopulation(){
     <td><span class="mono">${a.revenu_mensuel.toLocaleString("fr-FR")} €</span> <span style="color:var(--doux)">${a.revenu}</span></td>
     <td>${a.logement === "proprietaire" ? "propriétaire" : a.logement === "locataire" ? "locataire" : "logé gratuitement"} · ${a.zone}</td>
     <td>${a.position ? `<span class="pastille ${a.position}">${POS[a.position]}</span>` : ""}</td>
-    <td>${a.effort_pct != null ? `<div class="effort"><b style="width:${Math.min(60, a.effort_pct*2)}px"></b><span class="mono">${a.effort_pct} %</span></div>` : ""}</td>
+    <td>${a.effort_pct != null ? `<div class="effort"><b style="width:${Math.min(60, a.effort_pct * 2)}px"></b><span class="mono">${a.effort_pct} %</span></div>` : ""}</td>
     <td>${ocean(a)}</td></tr>`).join("");
-  $$("#pop-corps tr").forEach(tr => tr.onclick = () => ouvrirFiche(+tr.dataset.id));
-}
-async function ouvrirFiche(id){
-  const d = await api("/api/agent", {id, config: lireConfig()}), a = PARID[id];
-  const e = d.enjeux;
-  $("#tiroir-corps").innerHTML = `
+      $$("#pop-corps tr").forEach(tr => tr.onclick = () => ouvrirFiche(+tr.dataset.id));
+    }
+    async function ouvrirFiche(id) {
+      const d = await api("/api/agent", { id, config: lireConfig() }), a = PARID[id];
+      const e = d.enjeux;
+      $("#tiroir-corps").innerHTML = `
     <div style="color:var(--doux);font-size:12px" class="mono">AGENT ${id}</div>
     <h2 style="font-size:26px;margin-top:4px">${esc(d.nom)}</h2>
     ${a.position ? `<div style="margin-top:8px"><span class="pastille ${a.position}">${POS[a.position]}</span></div>` : ""}
@@ -469,237 +1579,385 @@ async function ouvrirFiche(id){
     ${e ? `<h3 style="font-size:17px;margin-bottom:8px">Enjeux</h3><dl class="kv">
       <dt>Part des travaux</dt><dd class="mono">${e.part_annuelle} € / an · ${e.mensuel} € / mois</dd>
       <dt>Effort</dt><dd class="mono">${e.effort_pct} % du revenu</dd>
-      <dt>Objectif</dt><dd style="white-space:normal">${esc(e.objectif)}</dd></dl>` : ""}
-    ${d.marge ? `<h3 style="font-size:17px;margin:18px 0 8px">Marge secrète</h3><dl class="kv">${Object.entries(d.marge).map(([k,v]) => `<dt>${esc(k)}</dt><dd>${esc(Array.isArray(v) ? v.join(", ") : typeof v === "object" ? JSON.stringify(v) : v)}</dd>`).join("")}</dl>` : ""}
+      <dt>Objectif</dt><dd>${esc(e.objectif)}</dd></dl>` : ""}
+    ${d.marge ? `<h3 style="font-size:17px;margin:18px 0 8px">Marge secrète</h3><dl class="kv">${Object.entries(d.marge).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(Array.isArray(v) ? (v.join(", ") || "rien") : v)}</dd>`).join("")}</dl>` : ""}
     ${a.eligible ? `<button class="btn principal" style="margin-top:22px" onclick="ajouter(${id});fermerTiroir();montrer('lancer')">Ajouter à la scène</button>` : ""}`;
-  $("#tiroir").classList.add("ouvert");
-}
-function fermerTiroir(){ $("#tiroir").classList.remove("ouvert") }
-document.addEventListener("keydown", e => { if (e.key === "Escape") fermerTiroir() });
+      $("#tiroir").classList.add("ouvert");
+    }
+    function fermerTiroir() { $("#tiroir").classList.remove("ouvert") }
+    document.addEventListener("keydown", e => { if (e.key === "Escape") fermerTiroir() });
 
-/* ---------- lancer ---------- */
-function maxAgents(){ return CAPA.trois_agents ? 3 : 2 }
-function remplirSelect(){
-  $("#ajout-select").innerHTML = `<option value="">Choisir un agent éligible…</option>` + POP.filter(a => a.eligible)
-    .map(a => `<option value="${a.id}">${a.id} · ${esc(a.prenom)} ${esc(a.nom)} — ${POS[a.position]} (${a.effort_pct} %)</option>`).join("");
-}
-function ajouter(id){
-  if (!id || choisis.includes(id)) return;
-  if (choisis.length >= maxAgents()) choisis.shift();
-  choisis.push(id); dessinerChoix();
-}
-$("#ajout-btn").onclick = () => ajouter(+$("#ajout-select").value);
-$("#auto-btn").onclick = async () => {
-  try { const r = await api("/api/paire", {graine: +$("#graine").value, config: lireConfig()}); choisis = r.ids; dessinerChoix() }
-  catch (e) { $("#zone-bandeau").innerHTML = `<div class="bandeau alerte">${esc(e.message)}</div>` }
-};
-$$("#mode-seg button").forEach(b => b.onclick = () => {
-  $$("#mode-seg button").forEach(x => x.classList.toggle("actif", x === b));
-  modeSerie = b.dataset.v === "serie";
-  $("#barre-serie").style.display = modeSerie ? "flex" : "none";
-  dessinerChoix();
-});
-$("#mode-agents").onchange = () => { modeManuel = true; dessinerChoix() };
-function retirer(id){ choisis = choisis.filter(x => x !== id); dessinerChoix() }
+    /* ---------- lancer ---------- */
+    function remplirSelect() {
+      $("#ajout-select").innerHTML = `<option value="">Choisir un agent éligible…</option>` + POP.filter(a => a.eligible)
+        .map(a => `<option value="${a.id}">${a.id} · ${esc(a.prenom)} ${esc(a.nom)} — ${POS[a.position]} (${a.effort_pct} %)</option>`).join("");
+    }
+    function ajouter(id) {
+      if (!id || choisis.includes(id)) return;
+      if (choisis.length >= 2) choisis.shift();
+      choisis.push(id); dessinerChoix();
+    }
+    $("#ajout-btn").onclick = () => ajouter(+$("#ajout-select").value);
+    $("#auto-btn").onclick = async () => {
+      try { const r = await api("/api/paire", { graine: +$("#graine").value, config: lireConfig(), exiger_zone: $("#mode").value === "negociation" }); choisis = r.ids; dessinerChoix() }
+      catch (e) { $("#zone-bandeau").innerHTML = `<div class="bandeau alerte">${esc(e.message)}</div>` }
+    };
+    $$("#mode-seg button").forEach(b => b.onclick = () => {
+      $$("#mode-seg button").forEach(x => x.classList.toggle("actif", x === b));
+      modeSerie = b.dataset.v === "serie";
+      $("#barre-serie").style.display = modeSerie ? "flex" : "none";
+      dessinerChoix();
+    });
+    $("#mode-agents").onchange = () => { modeManuel = true; dessinerChoix() };
+    function retirer(id) { choisis = choisis.filter(x => x !== id); dessinerChoix() }
 
-// Mode de tirage des agents d'une série : cohérent avec le nombre d'agents choisis
-function majModeAgents(){
-  const m = $("#mode-agents");
-  m.querySelector('[value="memes"]').disabled = choisis.length < 2;
-  if (choisis.length < 2 && m.value === "memes") m.value = "opposes";
-  else if (choisis.length >= 2 && !modeManuel) m.value = "memes";
-  $("#taille").style.display = (CAPA.trois_agents && m.value !== "memes" && m.value !== "optimisees") ? "" : "none";
-  $("#serie-aide").textContent = {
-    memes: "Les agents choisis ci-dessus rejouent la scène à chaque fois.",
-    opposes: "Chaque scène oppose un agent « pour » (qui commence) et un agent « contre » tirés au hasard parmi les éligibles. Les agents choisis ci-dessus sont ignorés ; la graine rend le tirage reproductible.",
-    aleatoire: "Chaque scène réunit des agents tirés au hasard parmi tous les éligibles, quelle que soit leur position. Les agents choisis ci-dessus sont ignorés ; la graine rend le tirage reproductible.",
-    optimisees: "Chaque scène utilise la paire automatique (grand écart d'effort, faible agréabilité) pour la graine, la graine + 1, la graine + 2…"}[m.value];
-}
+    function majModeAgents() {
+      const m = $("#mode-agents");
+      m.querySelector('[value="memes"]').disabled = choisis.length < 2;
+      if (choisis.length < 2 && m.value === "memes") m.value = "opposes_zone";
+      else if (choisis.length >= 2 && !modeManuel) m.value = "memes";
+      $("#serie-aide").textContent = TIRAGES[m.value][1];
+    }
 
-async function dessinerChoix(){
-  $("#cartes").innerHTML = choisis.map((id, k) => { const a = PARID[id]; return `
+    async function dessinerChoix() {
+      $("#cartes").innerHTML = choisis.map((id, k) => {
+        const a = PARID[id]; if (!a) return ""; return `
     <div class="carte agent">
       <button class="retirer" onclick="retirer(${id})" title="Retirer">×</button>
       <div class="mono" style="font-size:11px;color:var(--doux)">${k === 0 ? "COMMENCE · " : ""}AGENT ${id}</div>
       <h3>${esc(a.prenom)} ${esc(a.nom)}</h3>
       <div class="sous">${a.age_annees} ans · ${esc(a.situation)} · ${esc(a.foyer_txt)}</div>
       <span class="pastille ${a.position}">${POS[a.position]}</span>
-      <div class="chiffres"><div><b>${a.revenu_mensuel.toLocaleString("fr-FR")} €</b>revenu / mois</div><div><b>${a.mensuel} €</b>de hausse / mois</div><div><b>${a.effort_pct} %</b>du revenu</div></div>
+      <div class="chiffres"><div><b>${a.revenu_mensuel.toLocaleString("fr-FR")} €</b>revenu / mois</div><div><b>${a.mensuel} €</b>tout le projet / mois</div><div><b>${a.effort_pct} %</b>du revenu</div></div>
       ${a.traits ? `<div class="traits">${esc(a.traits)}</div>` : ""}
-    </div>`}).join("") || `<div class="carte vide" style="grid-column:1/-1">Ajoute des agents, ou tire une paire automatique.</div>`;
+    </div>`}).join("") || `<div class="carte vide" style="grid-column:1/-1">Ajoute deux agents, ou tire une paire automatique.</div>`;
 
-  majModeAgents();
-  const aleatoire = modeSerie && $("#mode-agents").value !== "memes";
-  $("#go").textContent = modeSerie ? "▶ Lancer la série" : "▶ Jouer la scène";
-  $("#go").disabled = modeSerie ? (!aleatoire && choisis.length < 2) : choisis.length < 2;
-  $$("#pop-corps tr").forEach(tr => tr.classList.toggle("choisi", choisis.includes(+tr.dataset.id)));
+      majModeAgents();
+      const aleatoire = modeSerie && $("#mode-agents").value !== "memes";
+      $("#go").textContent = modeSerie ? "▶ Lancer la série" : "▶ Jouer la scène";
+      $("#go").disabled = JOB !== null || (modeSerie ? (!aleatoire && choisis.length < 2) : choisis.length < 2);
+      $$("#pop-corps tr").forEach(tr => tr.classList.toggle("choisi", choisis.includes(+tr.dataset.id)));
 
-  const zb = $("#zone-bandeau"); zb.innerHTML = "";
-  if (choisis.length < 2) return;
-  try {
-    const {zone} = await api("/api/zone", {ids: choisis});
-    if (zone == null) zb.innerHTML = `<div class="bandeau neutre">Zone d'accord non calculée par cette version du projet.</div>`;
-    else if (!zone.length) zb.innerHTML = `<div class="bandeau alerte"><b>Zone d'accord vide.</b> Aucune option n'est acceptable pour tous : la négociation devrait échouer.</div>`;
-    else zb.innerHTML = `<div class="bandeau info"><b>${zone.length} option${zone.length>1?"s":""} acceptable${zone.length>1?"s":""}</b> pour tous les agents.
-       <details style="margin-left:auto"><summary style="cursor:pointer">voir</summary><pre class="mono" style="font-size:12px;white-space:pre-wrap">${esc(zone.map(z => typeof z === "string" ? z : JSON.stringify(z)).join("\n"))}</pre></details></div>`;
-  } catch (e) { zb.innerHTML = `<div class="bandeau alerte">${esc(e.message)}</div>` }
-}
-
-function cote(loc, noms){
-  if (/^syndic|médiat/i.test(loc)) return "s";
-  const k = noms.indexOf(loc); return k === 0 ? "g" : k === 1 ? "d" : "c";
-}
-function bulles(lignes, noms){
-  return lignes.map(([loc, txt]) => {
-    const t = esc(txt).replace(/\[\s*ACCORD\s*\]/gi, '<span class="accord-tag">ACCORD</span>');
-    return `<div class="replique ${cote(loc, noms)}"><div class="qui">${esc(loc)}</div><div class="bulle">${t}</div></div>`;
-  }).join("");
-}
-function decouper(l){ const i = l.indexOf(" : "); return i > 0 ? [l.slice(0, i), l.slice(i + 3)] : ["", l] }
-function verdict(r){
-  if (r.erreur) return `<div class="bandeau alerte" style="margin-top:16px">${esc(r.erreur)}</div>`;
-  return `<div class="verdict">
-    <div class="carte"><small>Accord</small><b>${ouinon(r.accord)}</b></div>
-    <div class="carte"><small>Cohérent avec les marges</small><b>${ouinon(r.coherent)}</b></div>
-    <div class="carte"><small>Médiateur</small><b>${r.mediateur ? "intervenu" : "non"}</b></div>
-    <div class="carte"><small>Durée</small><b class="mono">${r.duree_s} s</b></div></div>
-    ${r.proposition_finale ? `<div class="bandeau info" style="margin-top:12px"><b>Proposition retenue :</b> ${esc(r.proposition_finale)}</div>` : ""}`;
-}
-
-$("#go").onclick = async () => {
-  const reg = lireReglages();
-  const memes = !modeSerie || $("#mode-agents").value === "memes";
-  const corps = {reglages: reg, etiquette: reg.etiquette, n: modeSerie ? +$("#nb").value : 1,
-                 ids: memes ? choisis : [], graine: +$("#graine").value, config: lireConfig(),
-                 mode_agents: modeSerie ? $("#mode-agents").value : "memes", taille: +$("#taille").value};
-  $("#go").disabled = true;
-  try {
-    const {job} = await api("/api/lancer", corps);
-    modeSerie ? await suivreSerie(job, corps.n) : await suivreScene(job);
-  } catch (e) {
-    $("#sortie").innerHTML = `<div class="bandeau alerte" style="margin-top:20px">${esc(e.message)}</div>`;
-    dessinerChoix();
-  }
-};
-
-async function suivreScene(job){
-  $("#sortie").innerHTML = `<div class="carte dialogue" id="dlg"><div class="ecrit">Les agents se croisent dans le hall…</div></div><div id="vd"></div>`;
-  while (true){
-    const j = await api("/api/job/" + job);
-    const noms = j.agents.map(a => a.nom);
-    if (j.lignes.length) $("#dlg").innerHTML = bulles(j.lignes.map(decouper), noms) + (j.etat === "fini" ? "" : `<div class="ecrit">…</div>`);
-    if (j.etat === "fini"){
-      const r = j.resultats[0];
-      if (!r){ $("#dlg").innerHTML = `<div class="ecrit">${esc(j.erreur_job || "Aucun résultat.")}</div>`; $("#go").disabled = false; return }
-      if (!j.lignes.length && r.dialogue.length) $("#dlg").innerHTML = bulles(r.dialogue, r.noms);
-      if (!r.dialogue.length) $("#dlg").innerHTML = `<div class="ecrit">Aucune réplique.</div>`;
-      $("#vd").innerHTML = verdict(r); $("#go").disabled = false; return;
+      const zb = $("#zone-bandeau"); zb.innerHTML = "";
+      if (choisis.length < 2) return;
+      try {
+        const { zone } = await api("/api/zone", { ids: choisis, config: lireConfig() });
+        if (zone == null) return;
+        if (!zone.length) zb.innerHTML = `<div class="bandeau alerte"><b>Zone d'accord vide.</b> Aucune option n'est acceptable pour les deux : un accord serait forcément hors des marges.</div>`;
+        else zb.innerHTML = `<div class="bandeau info"><b>${zone.length} option${zone.length > 1 ? "s" : ""} acceptable${zone.length > 1 ? "s" : ""}</b> pour les deux agents${$("#mode").value === "debat" ? " (non utilisée en mode débat)" : ""}.
+       <details style="margin-left:auto"><summary style="cursor:pointer">voir</summary><pre class="mono" style="font-size:12px;white-space:pre-wrap">${esc(zone.join("\n"))}</pre></details></div>`;
+      } catch (e) { zb.innerHTML = `<div class="bandeau alerte">${esc(e.message)}</div>` }
     }
-    await new Promise(r => setTimeout(r, 600));
-  }
-}
-async function suivreSerie(job, n){
-  $("#sortie").innerHTML = `<div class="carte" style="padding:20px 22px;margin-top:20px">
-    <div style="display:flex;justify-content:space-between"><b style="font-family:var(--serif);font-size:18px;font-weight:500">Série en cours</b><span class="mono" id="sr-n">0 / ${n}</span></div>
-    <div class="progression"><i id="sr-barre" style="width:0"></i></div>
-    <div id="sr-courante" style="color:var(--doux);font-size:13px"></div>
-    <table style="margin-top:12px"><thead><tr><th>Agents</th><th>Accord</th><th>Cohérent</th><th>Médiateur</th><th>Zone vide</th><th>Durée</th></tr></thead><tbody id="sr-corps"></tbody></table></div>`;
-  while (true){
-    const j = await api("/api/job/" + job);
-    $("#sr-n").textContent = `${j.fait} / ${n}`; $("#sr-barre").style.width = (100 * j.fait / n) + "%";
-    $("#sr-courante").textContent = j.etat === "fini" ? (j.erreur_job ? "Interrompu : " + j.erreur_job : "Terminé. Les résultats sont dans Statistiques.") :
-      `Scène ${j.courante + 1} : ${j.agents.map(a => a.nom).join(" / ")} · ${j.lignes.length} réplique(s)`;
-    $("#sr-corps").innerHTML = j.resultats.map(r => `<tr><td>${r.noms.map((nom, i) => `${esc(nom)} <span class="pastille ${r.positions[i]}">${POS[r.positions[i]] || ""}</span>`).join(" / ")}</td><td>${ouinon(r.accord)}</td><td>${ouinon(r.coherent)}</td>
-      <td>${r.mediateur ? "oui" : "non"}</td><td>${ouinon(r.zone_vide)}</td><td class="mono">${r.erreur ? `<span class="non" title="${esc(r.erreur)}">erreur</span>` : r.duree_s + " s"}</td></tr>`).join("");
-    if (j.etat === "fini"){ $("#go").disabled = false; return }
-    await new Promise(r => setTimeout(r, 800));
-  }
-}
 
-/* ---------- scènes jouées ---------- */
-let SCENES = [];
-async function chargerScenes(){
-  SCENES = await api("/api/scenes");
-  $("#sc-resume").textContent = `${SCENES.length} scène${SCENES.length > 1 ? "s" : ""} dans le journal`;
-  if (!SCENES.length){ $("#sc-liste").innerHTML = `<div class="vide">Aucune scène pour l'instant.</div>`; $("#sc-detail").innerHTML = ""; return }
-  $("#sc-liste").innerHTML = SCENES.map((s, k) => `<button data-k="${k}">
+    function cote(loc, noms) {
+      if (/^le syndic/i.test(loc)) return "s";
+      return noms.indexOf(loc) === 1 ? "d" : "g";
+    }
+    function bulles(lignes, noms) {
+      return lignes.map(([loc, txt, acc]) =>
+        `<div class="replique ${cote(loc, noms)}"><div class="qui">${esc(loc)}</div><div class="bulle">${esc(txt)}${acc ? '<span class="accord-tag">ACCORD</span>' : ""}</div></div>`).join("");
+    }
+    function verdict(r) {
+      if (r.erreur) return `<div class="bandeau alerte" style="margin-top:16px">${esc(r.erreur)}</div>`;
+      if (r.mode !== "negociation") return `<div class="verdict">
+    <div class="carte"><small>Mode</small><b>${MODES[r.mode] || r.mode}</b><div class="detail">pas d'accord mesuré</div></div>
+    <div class="carte"><small>Répliques</small><b class="mono">${r.dialogue.length}</b></div>
+    <div class="carte"><small>Mal formées</small><b class="mono">${r.mal_formees ?? 0}</b></div>
+    <div class="carte"><small>Durée</small><b class="mono">${r.duree_s} s</b></div></div>`;
+      const cpa = r.coherent_par_agent;
+      const det = cpa ? r.noms.map((n, i) => `${esc(n.split(" ")[0])} ${cpa[i] ? "✓" : "✗"}`).join(" · ") : "";
+      let jauges = "";
+      if (r.hausses && r.plafonds) {
+        jauges = r.noms.map((n, i) => {
+          const max = Math.max(r.plafonds[i], r.hausses[i]) * 1.15;
+          return `<div style="font-size:12.5px;margin-top:${i ? 14 : 0}px"><b style="font-weight:500">${esc(n)}</b> : <span class="mono">${r.hausses[i]} €</span> de hausse par mois · plafond secret <span class="mono">${r.plafonds[i]} €</span>
+        <div class="jauge"><span class="z" style="left:0;width:${100 * r.plafonds[i] / max}%"></span><span class="m" style="left:${100 * r.hausses[i] / max}%;background:${r.hausses[i] <= r.plafonds[i] + .5 ? "var(--accent)" : "var(--contre)"}"></span></div></div>`
+        }).join("");
+      }
+      return `<div class="verdict">
+    <div class="carte"><small>Accord</small><b>${ouinon(r.accord)}</b><div class="detail">${r.tour_accord ? "à la réplique " + r.tour_accord : r.zone_vide ? "zone d'accord vide" : ""}</div></div>
+    <div class="carte"><small>Dans les marges</small><b>${ouinon(r.coherent)}</b><div class="detail">${det}</div></div>
+    <div class="carte"><small>Syndic</small><b>${r.mediateur ? "intervenu" : "non"}</b><div class="detail">${r.tour_syndic ? "après la réplique " + r.tour_syndic : ""}</div></div>
+    <div class="carte"><small>Position dans la zone</small><b class="mono">${r.position_zone != null ? r.position_zone.toFixed(2) : "—"}</b><div class="detail">0 = option la plus modeste, 1 = la plus ambitieuse</div></div></div>
+    ${r.proposition_finale ? `<div class="bandeau info" style="margin:12px 0 0;display:block"><b>Proposition retenue :</b> ${esc(r.proposition_finale)}
+      <span style="opacity:.7;font-size:12px">(extraite par ${{ secretaire: "le secrétaire de séance", mots_cles: "mots-clés", script: "le script de test" }[r.methode_extraction] || "—"})</span></div>
+      ${jauges ? `<div class="carte" style="padding:14px 18px;margin-top:10px">${jauges}<div class="aide" style="margin-top:8px">Zone verte : ce que l'agent peut accepter ; trait : la hausse retenue.</div></div>` : ""}` : ""}
+    <div class="aide" style="margin-top:6px">Zone d'accord : ${r.zone_taille ?? "—"} option(s) · ${r.duree_s} s · ${r.mal_formees ?? 0} défaut(s) de forme</div>`;
+    }
+
+    $("#go").onclick = async () => {
+      const reg = lireReglages();
+      const memes = !modeSerie || $("#mode-agents").value === "memes";
+      const corps = {
+        sorte: modeSerie ? "serie" : "scene", reglages: reg, etiquette: reg.etiquette, n: modeSerie ? +$("#nb").value : 1,
+        ids: memes ? choisis : [], graine: +$("#graine").value, config: lireConfig(),
+        mode_agents: modeSerie ? $("#mode-agents").value : "memes"
+      };
+      try {
+        const { job } = await api("/api/lancer", corps);
+        JOB = job; $("#go").disabled = true; $("#stop").style.display = "";
+        modeSerie ? await suivreSerie(job, corps.n) : await suivreScene(job);
+      } catch (e) {
+        $("#sortie").innerHTML = `<div class="bandeau alerte" style="margin-top:20px">${esc(e.message)}</div>`;
+      }
+      JOB = null; $("#stop").style.display = "none"; dessinerChoix();
+    };
+    $("#stop").onclick = () => JOB && api("/api/arreter/" + JOB, {});
+
+    async function suivreScene(job) {
+      $("#sortie").innerHTML = `<div class="carte dialogue" id="dlg"><div class="ecrit" id="dlg-etat">En attente…</div></div><div id="vd"></div>`;
+      let affichees = 0;                                   // répliques déjà à l'écran : on n'ajoute que les nouvelles
+      const etat = t => { const e = $("#dlg-etat"); if (e) { e.textContent = t; e.style.display = t ? "" : "none" } };
+      while (true) {
+        const j = await api("/api/job/" + job);
+        const noms = j.agents.map(a => a.nom);
+        if (j.lignes.length > affichees) {
+          $("#dlg-etat").insertAdjacentHTML("beforebegin", bulles(j.lignes.slice(affichees), noms));
+          affichees = j.lignes.length;
+        }
+        if (j.etat === "en attente") etat(`En attente : ${j.file} travail(aux) avant celui-ci.`);
+        else if (j.etat === "en cours") etat(affichees ? "…" : "Les agents se croisent dans le hall…");
+        if (j.etat === "fini" || j.etat === "arrêté") {
+          const r = j.dernier;
+          if (!r) { etat(j.erreur_job || "Scène arrêtée."); return }
+          if (r.dialogue.length > affichees) $("#dlg-etat").insertAdjacentHTML("beforebegin", bulles(r.dialogue.slice(affichees), r.noms));
+          etat(r.dialogue.length ? "" : "Aucune réplique.");
+          $("#vd").innerHTML = verdict(r); return;
+        }
+        await pause(600);
+      }
+    }
+    function tableauResultats(res) {
+      return res.map(r => `<tr>${r.variante != null ? `<td>${esc(r.variante)}</td>` : ""}<td>${r.noms.map((nom, i) => `${esc(nom)} <span class="pastille ${r.positions[i]}">${POS[r.positions[i]] || ""}</span>`).join(" / ")}</td>
+    <td>${r.erreur ? `<span class="non" title="${esc(r.erreur)}">${r.erreur === "Interrompue" ? "arrêtée" : "erreur"}</span>` : r.mode === "negociation" ? ouinon(r.accord) : "débat"}</td><td>${ouinon(r.coherent)}</td>
+    <td>${r.mediateur ? "oui" : "non"}</td><td>${r.zone_vide == null ? "—" : r.zone_vide ? "oui" : "non"}</td><td class="mono">${r.duree_s} s</td></tr>`).join("");
+    }
+    async function suivreSerie(job, n, cible = "#sortie", variantes = false) {
+      const box = $(cible), q = s => box.querySelector(s);
+      box.innerHTML = `<div class="carte" style="padding:20px 22px;margin-top:20px">
+    <div style="display:flex;justify-content:space-between"><b style="font-family:var(--serif);font-size:18px;font-weight:500" class="sr-titre">En attente</b><span class="mono sr-n">0 / ${n}</span></div>
+    <div class="progression"><i class="sr-barre" style="width:0"></i></div>
+    <div class="sr-courante" style="color:var(--doux);font-size:13px"></div>
+    <div style="max-height:360px;overflow:auto;margin-top:12px"><table><thead><tr>${variantes ? "<th>Variante</th>" : ""}<th>Agents</th><th>Accord</th><th>Marges</th><th>Syndic</th><th>Zone vide</th><th>Durée</th></tr></thead><tbody class="sr-corps"></tbody></table></div></div>`;
+      while (true) {
+        const j = await api("/api/job/" + job);
+        q(".sr-n").textContent = `${j.fait} / ${j.total}`; q(".sr-barre").style.width = (100 * j.fait / j.total) + "%";
+        q(".sr-titre").textContent = { "en attente": "En attente", "en cours": "En cours", fini: "Terminé", "arrêté": "Arrêté" }[j.etat];
+        q(".sr-courante").textContent = j.etat === "en attente" ? `${j.file} travail(aux) avant celui-ci.` :
+          j.etat !== "en cours" ? (j.erreur_job ? "Interrompu : " + j.erreur_job : "Résultats enregistrés dans le journal.") :
+            `Scène ${j.courante + 1}${j.variante ? " · variante " + j.variante : ""} : ${j.agents.map(a => a.nom).join(" / ")} · ${j.lignes.length} réplique(s)`;
+        q(".sr-corps").innerHTML = tableauResultats([...j.resultats].reverse());
+        if (j.etat === "fini" || j.etat === "arrêté") return j;
+        await pause(800);
+      }
+    }
+
+    /* ---------- expériences ---------- */
+    let VARIANTES = [];
+    function varianteDepuisReglages(nom) {
+      const r = lireReglages(), m = lireConfig()?.marges || {};
+      return {
+        nom, mode: r.mode, backend: r.backend, modele: r.modele, temperature: +r.temperature, tours: +r.tours,
+        mediateur: r.mediateur, marges: { contre: +m.contre, partage: +m.partage, pour: +m.pour }
+      };
+    }
+    function initVariantes() {
+      VARIANTES = memo.lire("variantes", null) || [varianteDepuisReglages("référence"), { ...varianteDepuisReglages("sans syndic"), mediateur: false }];
+      dessinerVariantes();
+    }
+    function dessinerVariantes() {
+      const opt = (l, v) => l.map(([k, t]) => `<option value="${k}" ${k === v ? "selected" : ""}>${t}</option>`).join("");
+      $("#ex-variantes").innerHTML = VARIANTES.map((v, i) => `<tr data-i="${i}">
+    <td><input class="nom" data-k="nom" type="text" value="${esc(v.nom)}">${i === 0 ? '<div class="aide">référence</div>' : ""}</td>
+    <td><select data-k="mode">${opt([["negociation", "négociation"], ["debat", "débat"]], v.mode)}</select></td>
+    <td><select data-k="backend">${opt(["test", "ollama", "openai", "anthropic"].map(x => [x, x]), v.backend)}</select></td>
+    <td><input data-k="modele" type="text" value="${esc(v.modele)}" style="width:120px"></td>
+    <td><input data-k="temperature" type="number" step="0.1" min="0" max="1.5" value="${v.temperature}"></td>
+    <td><input data-k="tours" type="number" step="2" min="4" max="30" value="${v.tours}"></td>
+    <td style="text-align:center"><input data-k="mediateur" type="checkbox" ${v.mediateur ? "checked" : ""}></td>
+    ${["contre", "partage", "pour"].map(k => `<td><input data-m="${k}" type="number" step="0.5" min="0.5" value="${v.marges[k]}"></td>`).join("")}
+    <td>${VARIANTES.length > 2 ? `<button class="btn" data-suppr="${i}" title="Retirer">×</button>` : ""}</td></tr>`).join("");
+      $$("#ex-variantes input, #ex-variantes select").forEach(e => e.addEventListener("input", () => {
+        const v = VARIANTES[+e.closest("tr").dataset.i];
+        if (e.dataset.m) v.marges[e.dataset.m] = +e.value;
+        else v[e.dataset.k] = e.type === "checkbox" ? e.checked : e.type === "number" ? +e.value : e.value;
+        memo.ecrire("variantes", VARIANTES); totalExperience();
+      }));
+      $$("[data-suppr]").forEach(b => b.onclick = () => { VARIANTES.splice(+b.dataset.suppr, 1); memo.ecrire("variantes", VARIANTES); dessinerVariantes() });
+      totalExperience();
+    }
+    function totalExperience() {
+      const n = +$("#ex-n").value * +$("#ex-rep").value * VARIANTES.length;
+      $("#ex-total").textContent = `${n} scènes au total (${$("#ex-n").value} paire(s) × ${$("#ex-rep").value} répétition(s) × ${VARIANTES.length} variantes)`;
+    }
+    ["#ex-n", "#ex-rep"].forEach(s => $(s).addEventListener("input", totalExperience));
+    $("#ex-ajout").onclick = () => { VARIANTES.push({ ...varianteDepuisReglages("V" + (VARIANTES.length + 1)) }); memo.ecrire("variantes", VARIANTES); dessinerVariantes() };
+
+    let EXJOB = null;
+    $("#ex-go").onclick = async () => {
+      const reg = lireReglages();
+      const corps = {
+        sorte: "experience", nom: $("#ex-nom").value, n: +$("#ex-n").value, repetitions: +$("#ex-rep").value,
+        mode_agents: $("#ex-tirage").value, graine: +$("#ex-graine").value, ids: choisis, config: lireConfig(),
+        reglages: reg, etiquette: reg.etiquette,
+        variantes: VARIANTES.map(v => ({
+          nom: v.nom, marges: v.marges,
+          reglages: { mode: v.mode, backend: v.backend, modele: v.modele, temperature: v.temperature, tours: v.tours, mediateur: v.mediateur }
+        }))
+      };
+      try {
+        const { job } = await api("/api/lancer", corps);
+        EXJOB = job; $("#ex-go").disabled = true; $("#ex-stop").style.display = "";
+        const j = await suivreSerie(job, corps.n, "#ex-progression", true);
+        await chargerExperiences(j.experience);
+      } catch (e) { $("#ex-progression").innerHTML = `<div class="bandeau alerte" style="margin-top:14px">${esc(e.message)}</div>` }
+      EXJOB = null; $("#ex-go").disabled = false; $("#ex-stop").style.display = "none";
+    };
+    $("#ex-stop").onclick = () => EXJOB && api("/api/arreter/" + EXJOB, {});
+
+    let EXP = null;
+    async function chargerExperiences(choix) {
+      const l = await api("/api/experiences");
+      if (!l.length) { $("#ex-liste").innerHTML = "<option>Aucune expérience pour l'instant</option>"; $("#ex-resultats").innerHTML = ""; return }
+      const actuel = choix || $("#ex-liste").value || l[0].experience;
+      $("#ex-liste").innerHTML = l.map(e => `<option value="${e.experience}" ${e.experience === actuel ? "selected" : ""}>${esc(e.nom)} · ${e.date.replace("T", " ")} · ${e.variantes.length} variantes · ${e.scenes} scènes</option>`).join("");
+      voirExperience($("#ex-liste").value);
+    }
+    $("#ex-liste").onchange = () => voirExperience($("#ex-liste").value);
+
+    function decrire(rv) {
+      if (!rv) return "";
+      const r = rv.reglages || {}, m = rv.marges || {};
+      return `${MODES[r.mode] || r.mode} · ${esc(r.backend)} ${esc(r.modele || "")} · T=${r.temperature} · ${r.tours} répl. · syndic ${r.mediateur ? "oui" : "non"} · marges ${m.contre}/${m.partage}/${m.pour} %`;
+    }
+    function interpretation(c) {
+      if (c.gagne + c.perd === 0) return "aucune paire ne diffère";
+      const sens = c.difference > 0 ? "plus d'accords" : c.difference < 0 ? "moins d'accords" : "autant d'accords";
+      return c.p_valeur < 0.05 ? `<span class="signif oui">${sens}, différence significative</span> (p = ${c.p_valeur.toFixed(3)})`
+        : `${sens}, mais <b>pas de différence démontrée</b> (p = ${c.p_valeur.toFixed(2)}) : plus de paires seraient nécessaires`;
+    }
+    async function voirExperience(id) {
+      if (!id) return;
+      const e = EXP = await api("/api/experience/" + id);
+      const lignesComp = (liste, quoi) => liste.length ? `<table><thead><tr><th>Variante</th><th>Unités communes</th><th>${quoi} référence</th><th>${quoi} variante</th><th>Écart</th><th>Paires gagnées / perdues</th><th>Conclusion (McNemar exact)</th></tr></thead><tbody>
+    ${liste.map(c => `<tr><td>${esc(c.variante)}</td><td class="mono">${c.unites}</td><td class="mono">${pct(c.taux_reference)}</td><td class="mono">${pct(c.taux_variante)}</td>
+      <td class="mono">${c.difference > 0 ? "+" : ""}${Math.round(100 * c.difference)} pts</td><td class="mono">${c.gagne} / ${c.perd}</td><td style="white-space:normal">${interpretation(c)}</td></tr>`).join("")}</tbody></table>` : `<div class="vide" style="padding:16px">Pas de comparaison possible (variantes en débat ou sans accord mesuré).</div>`;
+      $("#ex-resultats").innerHTML = `
+    <div class="carte" style="overflow:auto"><table><thead><tr><th>Variante</th><th>Scènes</th><th>Taux d'accord</th><th>Accord si zone</th><th>Dans les marges</th><th>Sans syndic</th><th>Accord / zone vide</th><th>Position zone</th><th>Durée</th></tr></thead><tbody>
+      ${e.variantes.map(v => `<tr><td style="white-space:normal;min-width:190px;max-width:240px"><b style="font-weight:500">${esc(v.variante)}</b>${v.variante === e.reference ? ' <span class="pastille partage">référence</span>' : ""}<div class="aide">${decrire(v.reglages)}</div></td>
+        <td class="mono">${v.scenes}${v.erreurs ? ` <span class="non">(${v.erreurs} err.)</span>` : ""}</td><td>${ic(v.accord)}</td><td>${ic(v.accord_zone)}</td><td>${ic(v.coherent)}</td><td>${ic(v.sans_mediateur)}</td><td>${ic(v.accord_zone_vide)}</td>
+        <td>${moy(v.position_zone)}</td><td>${moy(v.duree_s, x => x.toFixed(1), " s")}</td></tr>`).join("")}</tbody></table></div>
+    <p class="note">Entre crochets : intervalle de confiance à 95 % (Wilson). « Accord / zone vide » doit rester à 0 % : sinon les agents acceptent des options hors de leurs marges. « Position zone » : 0 si l'accord retient l'option la plus modeste de la zone (avantage au « contre »), 1 la plus ambitieuse (avantage au « pour »).</p>
+    <h3 class="sec">Comparaison à la référence · taux d'accord</h3>
+    <div class="carte" style="overflow:auto">${lignesComp(e.comparaison_accord, "Accord")}</div>
+    <h3 class="sec">Comparaison à la référence · accords dans les marges</h3>
+    <div class="carte" style="overflow:auto">${lignesComp(e.comparaison_coherent, "Dans les marges")}</div>
+    <p class="note">La comparaison est appariée : on ne regarde que les paires d'agents jouées par les deux variantes, et le test exact de McNemar ne compte que les paires où elles diffèrent (« gagnées » : accord avec la variante seulement ; « perdues » : avec la référence seulement). ${e.unites} unité(s) dans cette expérience.</p>`;
+    }
+    $("#ex-csv").onclick = async () => {
+      if (!EXP) return;
+      const scenes = (await api("/api/scenes")).filter(s => s.experience === EXP.experience);
+      telecharger(scenes.map(s => ({
+        experience: s.experience, variante: s.variante, unite: s.unite, agents: s.noms.join(" / "),
+        ids: s.ids.join("-"), positions: s.positions.join("-"), mode: s.mode, modele: `${s.backend} ${s.modele}`, temperature: s.temperature,
+        accord: s.accord, coherent: s.coherent, mediateur: s.mediateur, zone_taille: s.zone_taille, position_zone: s.position_zone,
+        proposition: s.proposition_finale, tour_accord: s.tour_accord, repliques: s.dialogue.length, duree_s: s.duree_s, erreur: s.erreur
+      })),
+        `experience_${EXP.experience}.csv`);
+    };
+    function telecharger(lignes, nom) {
+      if (!lignes.length) return;
+      const cols = Object.keys(lignes[0]);
+      const csv = [cols.join(","), ...lignes.map(s => cols.map(c => `"${String(s[c] ?? "").replace(/"/g, '""')}"`).join(","))].join("\n");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv" })); a.download = nom; a.click();
+    }
+
+    /* ---------- scènes jouées ---------- */
+    let SCENES = [];
+    async function chargerScenes() {
+      SCENES = await api("/api/scenes");
+      $("#sc-resume").textContent = `${SCENES.length} scène${SCENES.length > 1 ? "s" : ""} dans le journal`;
+      if (!SCENES.length) { $("#sc-liste").innerHTML = `<div class="vide">Aucune scène pour l'instant.</div>`; $("#sc-detail").innerHTML = ""; return }
+      $("#sc-liste").innerHTML = SCENES.map((s, k) => `<button data-k="${k}">
     <div class="l1"><span class="point ${s.accord === true ? "oui" : s.accord === false ? "non" : ""}"></span>${esc(s.noms.join(" / "))}</div>
-    <div class="l2 mono">${s.date.replace("T", " ")} · ${esc(s.backend)} ${esc(s.modele)}${s.etiquette ? " · " + esc(s.etiquette) : ""}</div></button>`).join("");
-  $$("#sc-liste button").forEach(b => b.onclick = () => voirScene(+b.dataset.k));
-  voirScene(0);
-}
-function voirScene(k){
-  $$("#sc-liste button").forEach(b => b.classList.toggle("actif", +b.dataset.k === k));
-  const s = SCENES[k];
-  $("#sc-detail").innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <div class="l2 mono">${s.date.replace("T", " ")} · ${MODES[s.mode] || "ancien"} · ${esc(s.backend)} ${esc(s.modele)}${s.variante ? " · " + esc(s.variante) : ""}${s.etiquette ? " · " + esc(s.etiquette) : ""}</div></button>`).join("");
+      $$("#sc-liste button").forEach(b => b.onclick = () => voirScene(+b.dataset.k));
+      voirScene(0);
+    }
+    function voirScene(k) {
+      $$("#sc-liste button").forEach(b => b.classList.toggle("actif", +b.dataset.k === k));
+      const s = SCENES[k];
+      const dial = s.dialogue.map(d => Array.isArray(d) ? d : [d.locuteur, d.texte, false]);
+      $("#sc-detail").innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       ${s.noms.map((n, i) => `<span class="pastille ${s.positions[i]}">${esc(n)} · ${POS[s.positions[i]] || s.positions[i]}</span>`).join("")}
-      <span style="color:var(--doux);font-size:12.5px;margin-left:auto" class="mono">T=${s.temperature} · ${s.tours_max} répliques max${s.tour_accord ? " · accord à la réplique " + s.tour_accord : ""}${s.config_id ? " · config " + esc(s.config_id) : ""}</span></div>
-    ${verdict(s)}
-    <div class="carte dialogue">${s.dialogue.length ? bulles(s.dialogue, s.noms) : `<div class="ecrit">Aucune réplique.</div>`}</div>
-    <details style="margin-top:12px;color:var(--doux);font-size:13px"><summary style="cursor:pointer">Contrôles, zone d'accord et configuration</summary>
-      <pre class="fiche">${esc(JSON.stringify({controles: s.controles, zone_vide: s.zone_vide, zone: s.zone, mode_agents: s.mode_agents, config: s.config}, null, 2))}</pre></details>`;
-}
+      <span style="color:var(--doux);font-size:12.5px;margin-left:auto" class="mono">${MODES[s.mode] || "ancien"} · T=${s.temperature} · ${s.tours_max} répliques max${s.config_id ? " · config " + esc(s.config_id) : ""}</span></div>
+    ${verdict({ ...s, mode: s.mode || "ancien", dialogue: dial })}
+    <div class="carte dialogue">${dial.length ? bulles(dial, s.noms) : `<div class="ecrit">Aucune réplique.</div>`}</div>
+    ${s.consignes ? `<details style="margin-top:12px;color:var(--doux);font-size:13px"><summary style="cursor:pointer">Consignes envoyées aux agents</summary>
+      ${Object.entries(s.consignes).map(([n, c]) => `<h3 style="font-size:16px;margin-top:14px;color:var(--encre)">${esc(n)}</h3><pre class="fiche">${esc(c)}</pre>`).join("")}</details>` : ""}
+    <details style="margin-top:8px;color:var(--doux);font-size:13px"><summary style="cursor:pointer">Zone d'accord, contrôles et configuration</summary>
+      <pre class="fiche">${esc(JSON.stringify({ zone: s.zone, controles: s.controles, option: s.option, plafonds: s.plafonds, hausses: s.hausses, mode_agents: s.mode_agents, experience: s.experience, unite: s.unite, config: s.config }, null, 2))}</pre></details>`;
+    }
 
-/* ---------- statistiques ---------- */
-const filtres = {modele: [], etiquette: [], serie: []};
-let groupe = ["modele_complet"], DERNIER = null;
-const GROUPES = {modele_complet:"modèle", temperature:"température", etiquette:"étiquette", tours_max:"répliques max", mediateur_actif:"médiateur activé", serie:"série",
-                 scenario_titre:"scénario", config_id:"configuration", mode_agents:"tirage des agents"};
+    /* ---------- statistiques ---------- */
+    const filtres = { modele: [], etiquette: [], serie: [], mode: [] };
+    let groupe = ["modele_complet"], DERNIER = null;
+    const GROUPES = {
+      modele_complet: "modèle", mode: "mode", temperature: "température", etiquette: "étiquette", tours_max: "répliques max", mediateur_actif: "syndic activé",
+      serie: "série", experience: "expérience", variante: "variante", scenario_titre: "scénario", config_id: "configuration", mode_agents: "tirage des agents"
+    };
 
-async function chargerStats(){
-  const q = new URLSearchParams();
-  Object.entries(filtres).forEach(([k, v]) => v.forEach(x => q.append(k, x)));
-  groupe.forEach(g => q.append("groupe", g));
-  const d = DERNIER = await api("/api/stats?" + q);
-  const m = d.mesures;
-  if (!m || !m.scenes && !m.erreurs){ $("#st-contenu").innerHTML = `<div class="carte vide">Aucune scène jouée pour l'instant. Lance une série depuis l'onglet Lancer.</div>`; return }
-  const puces = (cle, valeurs, etiq = x => x || "sans étiquette") => `<div class="puces">${valeurs.map(v =>
-     `<button class="puce ${filtres[cle].includes(v) ? "actif" : ""}" data-f="${cle}" data-v="${esc(v)}">${esc(etiq(v))}</button>`).join("") || '<span style="color:var(--doux)">—</span>'}</div>`;
-  const kpi = (t, v, s = "") => `<div class="carte kpi"><small>${t}</small><b>${v}</b><span>${s}</span></div>`;
-  const g = d.groupes;
-  $("#st-contenu").innerHTML = `
+    async function chargerStats() {
+      const q = new URLSearchParams();
+      Object.entries(filtres).forEach(([k, v]) => v.forEach(x => q.append(k, x)));
+      groupe.forEach(g => q.append("groupe", g));
+      const d = DERNIER = await api("/api/stats?" + q);
+      const m = d.mesures;
+      if (!m || (!m.scenes && !m.erreurs)) { $("#st-contenu").innerHTML = `<div class="carte vide">Aucune scène jouée pour l'instant. Lance une série ou une expérience.</div>`; return }
+      const puces = (cle, valeurs, etiq = x => x || "sans étiquette") => `<div class="puces">${valeurs.map(v =>
+        `<button class="puce ${filtres[cle].includes(v) ? "actif" : ""}" data-f="${cle}" data-v="${esc(v)}">${esc(etiq(v))}</button>`).join("") || '<span style="color:var(--doux)">—</span>'}</div>`;
+      const kpi = (t, v, s = "") => `<div class="carte kpi"><small>${t}</small><b>${v}</b><span>${s}</span></div>`;
+      const icTexte = p => p ? `[${Math.round(100 * p.bas)}–${Math.round(100 * p.haut)} %] · ${p.k}/${p.n}` : "";
+      const g = d.groupes;
+      $("#st-contenu").innerHTML = `
     <div class="bloc-filtres">
+      <span>Modes</span>${puces("mode", d.filtres.modes, x => MODES[x] || x)}
       <span>Modèles</span>${puces("modele", d.filtres.modeles)}
       <span>Étiquettes</span>${puces("etiquette", d.filtres.etiquettes)}
       <span>Séries</span>${puces("serie", d.filtres.series, x => x)}
     </div>
     <div class="kpis">
-      ${kpi("Scènes", m.scenes, m.erreurs ? `${m.erreurs} en erreur` : "")}
-      ${kpi("Taux d'accord", pct(m.taux_accord))}
-      ${kpi("Accords cohérents", pct(m.accords_coherents), "respectent les marges")}
-      ${kpi("Sans médiateur", pct(m.sans_mediateur), "accords avant le syndic")}
-      ${kpi("Accord malgré zone vide", pct(m.accord_zone_vide), `${m.zone_vide} scène(s) à zone vide · cible 0 %`)}
-      ${kpi("Mal formées", m.mal_formees, m.duree_moyenne_s != null ? `durée moy. ${m.duree_moyenne_s.toFixed(1)} s` : "")}
+      ${kpi("Scènes", m.scenes, `${m.negociations} négociation(s)${m.erreurs ? ` · ${m.erreurs} en erreur` : ""}${m.interrompues ? ` · ${m.interrompues} arrêtée(s)` : ""}`)}
+      ${kpi("Taux d'accord", pct(m.accord?.p), icTexte(m.accord))}
+      ${kpi("Accord si zone", pct(m.accord_zone?.p), icTexte(m.accord_zone))}
+      ${kpi("Dans les marges", pct(m.coherent?.p), icTexte(m.coherent))}
+      ${kpi("Sans syndic", pct(m.sans_mediateur?.p), icTexte(m.sans_mediateur))}
+      ${kpi("Accord / zone vide", pct(m.accord_zone_vide?.p), m.accord_zone_vide ? `${icTexte(m.accord_zone_vide)} · cible 0 %` : "aucune scène à zone vide")}
+      ${kpi("Mal formées", pct(m.scenes_mal_formees?.p), m.duree_s ? `durée moy. ${m.duree_s.moy.toFixed(1)} s` : "")}
     </div>
-    <div style="display:flex;align-items:center;gap:12px"><h3 class="sec" style="margin:0">Comparer par</h3>
+    <div style="display:flex;align-items:center;gap:12px"><h3 class="sec" style="margin:0;white-space:nowrap">Comparer par</h3>
       <div class="puces">${Object.entries(GROUPES).map(([k, v]) => `<button class="puce ${groupe.includes(k) ? "actif" : ""}" data-g="${k}">${v}</button>`).join("")}</div></div>
     ${g.length ? `<div class="carte" style="margin-top:12px;overflow:auto"><table><thead><tr>
-       ${groupe.map(x => `<th>${GROUPES[x]}</th>`).join("")}<th>Scènes</th><th>Taux d'accord</th><th>Cohérents</th><th>Sans médiateur</th><th>Accord / zone vide</th><th>Tour moyen</th><th>Mal formées</th><th>Durée moy.</th></tr></thead>
-       <tbody>${g.map(r => `<tr>${groupe.map(x => `<td>${esc(r[x] ?? "—")}</td>`).join("")}
-         <td class="mono">${r.scenes}</td>
-         <td><div class="barreh"><i style="width:${(r.taux_accord ?? 0) * 90}px"></i><span class="mono">${pct(r.taux_accord)}</span></div></td>
-         <td class="mono">${pct(r.accords_coherents)}</td><td class="mono">${pct(r.sans_mediateur)}</td><td class="mono">${pct(r.accord_zone_vide)}</td>
-         <td class="mono">${r.tour_accord_moyen != null ? r.tour_accord_moyen.toFixed(1) : "—"}</td><td class="mono">${r.mal_formees}</td>
-         <td class="mono">${r.duree_moyenne_s != null ? r.duree_moyenne_s.toFixed(1) + " s" : "—"}</td></tr>`).join("")}</tbody></table></div>` : ""}
+       ${groupe.map(x => `<th>${GROUPES[x]}</th>`).join("")}<th>Scènes</th><th>Taux d'accord</th><th>Accord si zone</th><th>Dans les marges</th><th>Sans syndic</th><th>Accord / zone vide</th><th>Position zone</th><th>Durée</th></tr></thead>
+       <tbody>${g.map(r => `<tr>${groupe.map(x => `<td>${esc(x === "mode" ? (MODES[r[x]] || r[x]) : r[x] ?? "—")}</td>`).join("")}
+         <td class="mono">${r.scenes}</td><td>${ic(r.accord)}</td><td>${ic(r.accord_zone)}</td><td>${ic(r.coherent)}</td><td>${ic(r.sans_mediateur)}</td><td>${ic(r.accord_zone_vide)}</td>
+         <td>${moy(r.position_zone)}</td><td>${moy(r.duree_s, x => x.toFixed(1), " s")}</td></tr>`).join("")}</tbody></table></div>
+       <p class="note">Barre : taux observé ; trait : intervalle de confiance à 95 % (Wilson). Deux groupes dont les intervalles se recouvrent largement ne sont pas départagés : jouez plus de scènes, ou utilisez une expérience (comparaison sur les mêmes paires).</p>` : ""}
     <h3 class="sec">Toutes les scènes</h3>
-    <div class="carte tableau-wrap" style="max-height:480px"><table><thead><tr><th>Date</th><th>Agents</th><th>Modèle</th><th>T°</th><th>Étiquette</th><th>Scénario</th><th>Accord</th><th>Cohérent</th><th>Médiateur</th><th>Zone vide</th><th>Répliques</th><th>Durée</th></tr></thead>
-      <tbody>${d.scenes.map(s => `<tr><td class="mono">${s.date.replace("T", " ")}</td><td>${esc(s.agents)}</td><td>${esc(s.modele_complet)}</td><td class="mono">${s.temperature}</td>
-        <td>${esc(s.etiquette || "")}</td><td title="configuration ${esc(s.config_id || "")}">${esc(s.scenario_titre || "")}</td><td>${s.erreur ? '<span class="non">erreur</span>' : ouinon(s.accord)}</td><td>${ouinon(s.coherent)}</td><td>${s.mediateur ? "oui" : "non"}</td>
-        <td>${ouinon(s.zone_vide)}</td><td class="mono">${s.repliques}</td><td class="mono">${s.duree_s} s</td></tr>`).join("")}</tbody></table></div>`;
-  $$("[data-f]").forEach(b => b.onclick = () => { const l = filtres[b.dataset.f], v = b.dataset.v; l.includes(v) ? l.splice(l.indexOf(v), 1) : l.push(v); chargerStats() });
-  $$("[data-g]").forEach(b => b.onclick = () => { const v = b.dataset.g; groupe.includes(v) ? groupe = groupe.filter(x => x !== v) : groupe.push(v); chargerStats() });
-}
-$("#csv").onclick = () => {
-  if (!DERNIER || !DERNIER.scenes.length) return;
-  const cols = Object.keys(DERNIER.scenes[0]);
-  const csv = [cols.join(","), ...DERNIER.scenes.map(s => cols.map(c => `"${String(s[c] ?? "").replace(/"/g, '""')}"`).join(","))].join("\n");
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob(["﻿" + csv], {type: "text/csv"})); a.download = "scenes_labo.csv"; a.click();
-};
-$("#vider").onclick = async () => {
-  if (!confirm("Vider le journal ? Une copie de sauvegarde est gardée dans scenes/.")) return;
-  await api("/api/vider", {}); chargerStats();
-};
-</script>
+    <div class="carte tableau-wrap" style="max-height:480px"><table><thead><tr><th>Date</th><th>Agents</th><th>Mode</th><th>Modèle</th><th>T°</th><th>Étiquette</th><th>Variante</th><th>Accord</th><th>Marges</th><th>Syndic</th><th>Zone</th><th>Proposition</th><th>Durée</th></tr></thead>
+      <tbody>${d.scenes.map(s => `<tr><td class="mono">${s.date.replace("T", " ")}</td><td>${esc(s.agents)}</td><td>${MODES[s.mode] || s.mode}</td><td>${esc(s.modele_complet)}</td><td class="mono">${s.temperature}</td>
+        <td>${esc(s.etiquette || "")}</td><td>${esc(s.variante || "")}</td><td>${s.erreur ? '<span class="non">' + (s.erreur === "Interrompue" ? "arrêtée" : "erreur") + '</span>' : ouinon(s.accord)}</td><td>${ouinon(s.coherent)}</td><td>${s.mediateur ? "oui" : "non"}</td>
+        <td class="mono">${s.zone_taille ?? "—"}</td><td style="white-space:normal;min-width:220px">${esc(s.proposition_finale || "")}</td><td class="mono">${s.duree_s} s</td></tr>`).join("")}</tbody></table></div>`;
+      $$("[data-f]").forEach(b => b.onclick = () => { const l = filtres[b.dataset.f], v = b.dataset.v; l.includes(v) ? l.splice(l.indexOf(v), 1) : l.push(v); chargerStats() });
+      $$("[data-g]").forEach(b => b.onclick = () => { const v = b.dataset.g; groupe.includes(v) ? groupe = groupe.filter(x => x !== v) : groupe.push(v); chargerStats() });
+    }
+    $("#csv").onclick = () => DERNIER && telecharger(DERNIER.scenes, "scenes_labo.csv");
+    $("#vider").onclick = async () => {
+      if (!confirm("Vider le journal ? Une copie de sauvegarde est gardée dans scenes/.")) return;
+      await api("/api/vider", {}); chargerStats();
+    };
+  </script>
 </body>
+
 </html>

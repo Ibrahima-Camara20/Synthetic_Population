@@ -219,8 +219,10 @@ def replique_test(p, e, tour, dernier, scenario=SCENARIO):
 # ---------------------------------------------------------------------------
 # Moteur de dialogue
 # ---------------------------------------------------------------------------
-def jouer_scene(a, b, client, tours=12, scenario=SCENARIO, verbeux=True, objectifs=OBJECTIFS):
-    """a commence (c'est celui qui veut le changement). Renvoie la liste des répliques."""
+def jouer_scene(a, b, client, tours=12, scenario=SCENARIO, verbeux=True, objectifs=OBJECTIFS,
+                rappel=None):
+    """a commence (c'est celui qui veut le changement). Renvoie la liste des répliques.
+    rappel(nom, texte) est appelé après chaque réplique (affichage en direct dans le labo)."""
     ea, eb = enjeux(a, scenario, objectifs), enjeux(b, scenario, objectifs)
     agents = [(a, b, ea, consigne(a, b, ea, scenario, commence=True)),
               (b, a, eb, consigne(b, a, eb, scenario))]
@@ -244,6 +246,8 @@ def jouer_scene(a, b, client, tours=12, scenario=SCENARIO, verbeux=True, objecti
         dialogue.append((nom, texte))
         if verbeux:
             print(f"{nom} : {texte}\n", flush=True)
+        if rappel:
+            rappel(nom, texte)
     return dialogue, ea, eb
 
 

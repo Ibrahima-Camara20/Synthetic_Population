@@ -18,6 +18,7 @@ fichiers MP3 sont mis bout à bout.
 
 import json
 import os
+import urllib.error
 import urllib.request
 
 ICI = os.path.dirname(os.path.abspath(__file__))
@@ -34,8 +35,30 @@ def synthetiser(texte, voice_id, cle):
     corps = json.dumps({"text": texte, "model_id": MODELE}).encode("utf-8")
     req = urllib.request.Request(URL.format(voice_id=voice_id), data=corps, headers={
         "xi-api-key": cle, "Content-Type": "application/json", "Accept": "audio/mpeg"})
-    with urllib.request.urlopen(req, timeout=120) as r:
-        return r.read()
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return r.read()
+    except urllib.error.HTTPError as e:
+        try:
+            detail = json.loads(e.read().decode("utf-8")).get("detail", {})
+        except Exception:
+            detail = {}
+        statut = detail.get("status", "") if isinstance(detail, dict) else ""
+        message = detail.get("message", "") if isinstance(detail, dict) else str(detail)
+        if e.code == 402 and "paid_plan" in statut:
+            raise SystemExit(
+                f"ElevenLabs refuse la voix {voice_id} : {message}\n"
+                "Avec le forfait gratuit, l'API n'accepte que les voix PAR DÉFAUT d'ElevenLabs "
+                "(celles déjà présentes dans « Mes voix » à la création du compte), pas celles "
+                "ajoutées depuis la bibliothèque. Remplacez cet identifiant dans voix.json.")
+        if e.code == 401:
+            raise SystemExit(f"Clé ElevenLabs refusée (401) : {message or 'clé invalide'}. "
+                             "Vérifiez qu'elle n'a pas été supprimée et qu'elle a accès à Text to Speech.")
+        if e.code in (402, 429):
+            raise SystemExit(f"ElevenLabs ({e.code}) : {message or 'crédits ou limite de la clé épuisés'}.")
+        raise SystemExit(f"Erreur ElevenLabs {e.code} pour la voix {voice_id} : {message or e.reason}")
+    except urllib.error.URLError as e:
+        raise SystemExit(f"Connexion à ElevenLabs impossible : {e.reason}")
 
 
 def generer_audio(dialogue, personas_par_nom, sortie):
@@ -49,7 +72,9 @@ def generer_audio(dialogue, personas_par_nom, sortie):
         voix = json.load(f)
     morceaux = []
     for nom, texte in dialogue:
-        cat = categorie(personas_par_nom[nom])
+        # Personnage hors population (le syndic) : voix « narrateur » si elle existe
+        cat = categorie(personas_par_nom[nom]) if nom in personas_par_nom else \
+            ("narrateur" if "narrateur" in voix else "homme_age")
         if cat not in voix:
             raise SystemExit(f"Pas de voix pour la catégorie « {cat} » dans voix.json.")
         morceaux.append(synthetiser(texte, voix[cat], cle))
