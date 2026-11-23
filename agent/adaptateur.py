@@ -17,18 +17,30 @@ Ce que le labo attend de chaque scène (dictionnaire renvoyé par lancer_scene) 
     mediateur                   True si le syndic est intervenu
     tour_accord                 numéro de la réplique où l'accord est conclu
     controles                   dict (verifier() de scene.py)
+    config, config_id           scénario, objectifs et critère utilisés (et leur empreinte)
     duree_s, erreur
 
 Les fonctions de négociation (zone d'accord, vérification des marges, médiateur)
 sont cherchées par leur nom dans scene.py puis dans negociation.py. Si elles
 n'existent pas (ancienne version), les champs correspondants valent None et le
 labo l'indique ; l'accord est alors détecté par les balises [ACCORD].
+
+Configuration (scénario, objectifs, critère d'éligibilité)
+----------------------------------------------------------
+Une « config » est un dictionnaire :
+    {"scenario": {...}, "objectifs": {...}, "eligibilite": "..."}
+Les valeurs par défaut sont lues dans scene.py (SCENARIO, OBJECTIFS,
+CRITERE_ELIGIBILITE). normaliser_config() complète et valide une config
+reçue de la page ; les autres fonctions attendent une config déjà normalisée.
 """
 
 import contextlib
+import copy
+import hashlib
 import importlib
 import inspect
 import io
+import json
 import os
 import re
 import sys
@@ -85,7 +97,87 @@ def capacites():
         "marge_secrete": FONCTION_MARGE is not None,
         "mediateur": "mediateur" in params,
         "trois_agents": "agents" in params or "c" in params,
+        "scenario_modifiable": "scenario" in params and "objectifs" in params
+                               and hasattr(scene, "OBJECTIFS"),
     }
+
+
+# ---------------------------------------------------------------------------
+# Configuration : scénario, objectifs, critère d'éligibilité
+# ---------------------------------------------------------------------------
+ETIQUETTES_SCENARIO = {"titre": "le titre", "lieu": "le lieu", "budget_annuel": "le budget annuel",
+                       "projet": "le projet", "urgent": "les travaux urgents"}
+ETIQUETTES_OBJECTIFS = {"contre": "l'objectif « contre »", "pour": "l'objectif « pour »",
+                        "partage": "l'objectif « partagé »", "sante": "la nuance santé"}
+
+
+def config_defaut():
+    """La configuration actuellement définie dans scene.py."""
+    return copy.deepcopy({
+        "scenario": getattr(scene, "SCENARIO", {}),
+        "objectifs": getattr(scene, "OBJECTIFS", {}),
+        "eligibilite": getattr(scene, "CRITERE_ELIGIBILITE",
+                               'logement == "proprietaire" and zone == "ville"'),
+    })
+
+
+def normaliser_config(config=None):
+    """Complète une config reçue avec les valeurs par défaut et la valide.
+    Lève ValueError (message en français) si une valeur est inutilisable."""
+    cfg = config_defaut()
+    recu = config or {}
+
+    for cle in cfg["scenario"]:
+        v = (recu.get("scenario") or {}).get(cle)
+        if v is None:
+            continue
+        if cle == "budget_annuel":
+            try:
+                v = float(str(v).replace(" ", "").replace(" ", "").replace(",", "."))
+            except ValueError:
+                raise ValueError("Le budget annuel doit être un nombre.") from None
+            if v <= 0:
+                raise ValueError("Le budget annuel doit être supérieur à zéro.")
+            v = int(v) if v == int(v) else v
+        else:
+            v = str(v).strip()
+            if not v:
+                raise ValueError(f"Le scénario ne peut pas avoir {ETIQUETTES_SCENARIO.get(cle, cle)} vide.")
+        cfg["scenario"][cle] = v
+
+    for cle in cfg["objectifs"]:
+        v = (recu.get("objectifs") or {}).get(cle)
+        if v is None:
+            continue
+        v = str(v).strip()
+        if not v and cle != "sante":      # la nuance santé peut être supprimée
+            raise ValueError(f"{ETIQUETTES_OBJECTIFS.get(cle, cle).capitalize()} ne peut pas être vide.")
+        cfg["objectifs"][cle] = v
+
+    if recu.get("eligibilite") is not None:
+        cfg["eligibilite"] = " ".join(str(recu["eligibilite"]).split())
+    return cfg
+
+
+def empreinte(cfg):
+    """Court identifiant d'une configuration, pour comparer des essais."""
+    brut = json.dumps(cfg, sort_keys=True, ensure_ascii=False)
+    return hashlib.md5(brut.encode("utf-8")).hexdigest()[:6]
+
+
+def colonnes_info(df):
+    """Colonnes utilisables dans le critère d'éligibilité, avec leurs valeurs possibles."""
+    info = {}
+    for c in df.columns:
+        if c.startswith("z_"):
+            continue
+        if pd.api.types.is_numeric_dtype(df[c]):
+            info[c] = None                       # nombre
+        else:                                    # texte (type object ou str selon la version de pandas)
+            valeurs = sorted(df[c].dropna().astype(str).unique())
+            if len(valeurs) <= 12:
+                info[c] = valeurs
+    return info
 
 
 # ---------------------------------------------------------------------------
@@ -105,12 +197,14 @@ def agent(df, i):
     return df[df["id"] == int(i)].iloc[0]
 
 
-def enjeux(p):
-    return scene.enjeux(p)
+def enjeux(p, cfg=None):
+    cfg = cfg or normaliser_config()
+    return scene.enjeux(p, cfg["scenario"], cfg["objectifs"])
 
 
-def eligibles(df):
-    return scene.eligibles(df)
+def eligibles(df, cfg=None):
+    cfg = cfg or normaliser_config()
+    return scene.eligibles(df, cfg["eligibilite"])
 
 
 def marge(p):
@@ -135,9 +229,59 @@ def zone(agents):
     return list(z) if z is not None else []
 
 
-def choisir_paire(df, graine, ids=None):
-    a, b = scene.choisir_paire(df, np.random.default_rng(graine), ids)
+def choisir_paire(df, graine, ids=None, cfg=None):
+    """Paire « pour / contre » choisie parmi les meilleures (grand écart d'effort)."""
+    cfg = cfg or normaliser_config()
+    try:
+        a, b = scene.choisir_paire(df, np.random.default_rng(graine), ids,
+                                   cfg["scenario"], cfg["objectifs"], cfg["eligibilite"])
+    except SystemExit as e:                   # scene.py arrête le programme : ici, simple erreur
+        raise ValueError(str(e)) from None
     return [a, b]
+
+
+def tirer_groupes(df, n, graine, taille=2, opposes=False, cfg=None):
+    """Tire n groupes d'agents au hasard parmi les éligibles (une paire par scène).
+
+    opposes=False : agents tirés au hasard, sans condition sur leur position.
+    opposes=True  : un agent « pour » (qui commence) et un agent « contre », tirés
+                    au hasard ; un éventuel troisième agent est tiré parmi les autres.
+    Les groupes déjà tirés dans la série ne sont pas rejoués tant que c'est possible.
+    Renvoie une liste de listes d'identifiants.
+    """
+    cfg = cfg or normaliser_config()
+    el = scene.eligibles(df, cfg["eligibilite"])
+    ids = [int(i) for i in el["id"]]
+    if len(ids) < taille:
+        raise ValueError(f"Il faut au moins {taille} agents éligibles "
+                         f"(il y en a {len(ids)} avec ce critère).")
+    rng = np.random.default_rng(graine)
+    pour, contre = [], []
+    if opposes:
+        for _, p in el.iterrows():
+            pos = scene.enjeux(p, cfg["scenario"], cfg["objectifs"])["position"]
+            if pos == "pour":
+                pour.append(int(p["id"]))
+            elif pos == "contre":
+                contre.append(int(p["id"]))
+        if not pour or not contre:
+            raise ValueError("Aucune paire « pour / contre » parmi les agents éligibles avec "
+                             "ce scénario : choisissez le tirage « tous les éligibles ».")
+    groupes, vus = [], set()
+    for _ in range(n):
+        g = None
+        for _essai in range(200):
+            if opposes:
+                g = [int(rng.choice(pour)), int(rng.choice(contre))]
+                if taille == 3:
+                    g.append(int(rng.choice([i for i in ids if i not in g])))
+            else:
+                g = [int(i) for i in rng.choice(ids, size=taille, replace=False)]
+            if frozenset(g) not in vus:
+                break
+        vus.add(frozenset(g))
+        groupes.append(g)
+    return groupes
 
 
 def fiche(p):
@@ -188,17 +332,19 @@ def _texte(x):
 
 def lancer_scene(agents, backend="test", modele=None, base_url=None, tours=12,
                  temperature=0.9, max_tokens=400, sans_reflexion=True, mediateur=True,
-                 rappel=None):
+                 config=None, rappel=None):
     """Joue une scène et renvoie le dictionnaire décrit en tête de fichier."""
     t0 = time.perf_counter()
+    cfg = config or normaliser_config()
     noms = [f"{p['prenom']} {p['nom']}" for p in agents]
-    ej = [enjeux(p) for p in agents]
+    ej = [enjeux(p, cfg) for p in agents]
     res = {
         "ids": [int(p["id"]) for p in agents], "noms": noms,
         "positions": [e["position"] for e in ej],
         "efforts_pct": [e["effort_pct"] for e in ej],
         "backend": backend, "modele": modele or "", "temperature": temperature,
         "tours_max": tours, "mediateur_actif": mediateur,
+        "config": cfg, "config_id": empreinte(cfg),
         "dialogue": [], "zone": None, "zone_vide": None, "accord": None,
         "proposition_finale": None, "coherent": None, "mediateur": False,
         "tour_accord": None, "controles": {}, "duree_s": 0.0, "erreur": None,
@@ -216,6 +362,10 @@ def lancer_scene(agents, backend="test", modele=None, base_url=None, tours=12,
             kwargs["mediateur"] = mediateur
         if "verbeux" in params:
             kwargs["verbeux"] = True
+        if "scenario" in params:
+            kwargs["scenario"] = cfg["scenario"]
+        if "objectifs" in params:
+            kwargs["objectifs"] = cfg["objectifs"]
         if len(agents) == 3 and "agents" in params:
             args = ()
             kwargs.update(agents=list(agents), client=client)

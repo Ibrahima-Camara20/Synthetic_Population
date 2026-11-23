@@ -22,7 +22,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
 body{background:var(--papier);color:var(--encre);font:14px/1.5 var(--sans);display:grid;grid-template-columns:268px 1fr}
-button,input,select{font:inherit;color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
 h1,h2,h3{font-family:var(--serif);font-weight:500;letter-spacing:-.01em;margin:0}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 
@@ -37,8 +37,9 @@ nav .num{font-family:var(--mono);font-size:11px;opacity:.6;width:18px}
 .titre-section{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--doux);margin:28px 0 10px}
 .champ{display:grid;gap:4px;margin-bottom:12px}
 .champ label{font-size:12px;color:var(--doux);display:flex;justify-content:space-between}
-input[type=text],input[type=number],select{width:100%;background:var(--carte);border:1px solid var(--ligne);border-radius:7px;padding:7px 9px;outline:none}
-input:focus,select:focus{border-color:var(--accent)}
+input[type=text],input[type=number],select,textarea{width:100%;background:var(--carte);border:1px solid var(--ligne);border-radius:7px;padding:7px 9px;outline:none}
+textarea{resize:vertical;line-height:1.5;display:block}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 input[type=range]{width:100%;accent-color:var(--accent)}
 .case{display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0;cursor:pointer}
 .case input{accent-color:var(--accent)}
@@ -65,6 +66,7 @@ main{padding:34px 44px 60px;overflow:auto;height:100vh}
 .pour{background:var(--pour-doux);color:var(--pour)} .contre{background:var(--contre-doux);color:var(--contre)}
 .partage{background:var(--partage-doux);color:var(--partage)}
 .vide{color:var(--doux);padding:40px;text-align:center;font-style:italic;font-family:var(--serif);font-size:16px}
+code{font-family:var(--mono);font-size:12px;background:var(--papier);border-radius:4px;padding:1px 5px}
 
 /* ---------- population ---------- */
 .filtres{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
@@ -88,6 +90,19 @@ pre.fiche{font-family:var(--mono);font-size:12.5px;line-height:1.6;white-space:p
 .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}
 .kv dt{color:var(--doux)} .kv dd{margin:0}
 
+/* ---------- scénario ---------- */
+.grille-cfg{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.bloc-cfg{padding:20px 22px}
+.bloc-cfg h3{font-size:19px;margin-bottom:4px}
+.bloc-cfg .intro{color:var(--doux);font-size:12.5px;margin:0 0 16px}
+.bloc-cfg .champ label{font-size:12.5px}
+.aide{color:var(--doux);font-size:12px;margin-top:2px}
+.large{grid-column:1/-1}
+.ligne-deux{display:grid;grid-template-columns:1fr 150px;gap:12px}
+#cfg-elig{font-family:var(--mono);font-size:13px}
+.colonnes-dispo{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12px;color:var(--doux)}
+.colonnes-dispo span{white-space:nowrap}
+
 /* ---------- lancer ---------- */
 .cartes-agents{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0}
 .agent{padding:16px 18px;position:relative}
@@ -104,6 +119,7 @@ pre.fiche{font-family:var(--mono);font-size:12.5px;line-height:1.6;white-space:p
 .bandeau.alerte{background:var(--contre-doux);color:var(--contre)}
 .bandeau.neutre{background:var(--carte);border:1px solid var(--ligne);color:var(--doux)}
 .barre-lancer{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.barre-lancer select{width:auto;max-width:440px}
 
 .dialogue{padding:26px 28px;margin-top:20px;display:flex;flex-direction:column;gap:14px;min-height:120px}
 .replique{max-width:72%;display:flex;flex-direction:column;gap:3px;animation:entree .25s ease}
@@ -158,9 +174,10 @@ h3.sec{font-size:19px;margin:28px 0 12px}
   </div>
   <nav>
     <button data-vue="population" class="actif"><span class="num">01</span>Population</button>
-    <button data-vue="lancer"><span class="num">02</span>Lancer</button>
-    <button data-vue="scenes"><span class="num">03</span>Scènes jouées</button>
-    <button data-vue="stats"><span class="num">04</span>Statistiques</button>
+    <button data-vue="scenario"><span class="num">02</span>Scénario</button>
+    <button data-vue="lancer"><span class="num">03</span>Lancer</button>
+    <button data-vue="scenes"><span class="num">04</span>Scènes jouées</button>
+    <button data-vue="stats"><span class="num">05</span>Statistiques</button>
   </nav>
 
   <div class="titre-section">Modèle</div>
@@ -184,7 +201,7 @@ h3.sec{font-size:19px;margin:28px 0 12px}
   <section class="vue actif" id="v-population">
     <div class="entete">
       <div><h2>Population</h2><p id="pop-resume"></p></div>
-      <div class="segment" id="pop-seg"><button data-v="elig" class="actif">Copropriétaires en ville</button><button data-v="tous">Tous</button></div>
+      <div class="segment" id="pop-seg"><button data-v="elig" class="actif">Éligibles</button><button data-v="tous">Tous</button></div>
     </div>
     <div class="filtres">
       <input id="f-texte" type="text" placeholder="Rechercher un nom, un métier…">
@@ -198,10 +215,59 @@ h3.sec{font-size:19px;margin:28px 0 12px}
     </table></div>
   </section>
 
+  <!-- ======================= SCÉNARIO ======================= -->
+  <section class="vue" id="v-scenario">
+    <div class="entete">
+      <div><h2>Scénario</h2><p id="cfg-resume">Chargement…</p></div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="pastille partage" id="cfg-modif" style="display:none">modifié</span>
+        <button class="btn" id="cfg-reset">Rétablir les valeurs de scene.py</button>
+      </div>
+    </div>
+    <div id="cfg-erreur"></div>
+    <div id="cfg-avertissement"></div>
+
+    <div class="grille-cfg">
+      <div class="carte bloc-cfg">
+        <h3>Situation</h3>
+        <p class="intro">Le contexte donné aux agents. Les champs sont préremplis avec les valeurs de <code>scene.py</code>.</p>
+        <div class="champ"><label for="cfg-s-titre">Titre</label><input id="cfg-s-titre" type="text"></div>
+        <div class="champ"><label for="cfg-s-lieu">Lieu</label><textarea id="cfg-s-lieu" rows="3"></textarea>
+          <div class="aide">Inséré après « Lieu : ».</div></div>
+        <div class="champ"><label for="cfg-s-projet">Projet proposé</label><textarea id="cfg-s-projet" rows="4"></textarea>
+          <div class="aide">Inséré après « Le syndic propose de ». Si vous changez le budget ci-dessous, pensez à adapter le montant écrit ici.</div></div>
+        <div class="ligne-deux">
+          <div class="champ"><label for="cfg-s-urgent">Travaux urgents</label><input id="cfg-s-urgent" type="text"></div>
+          <div class="champ"><label for="cfg-s-budget_annuel">Budget annuel (€)</label><input id="cfg-s-budget_annuel" type="number" min="1" step="1000"></div>
+        </div>
+        <div class="aide">Le budget sert au calcul de la part de chaque agent (quote-part × budget).</div>
+      </div>
+
+      <div class="carte bloc-cfg">
+        <h3>Objectifs des agents</h3>
+        <p class="intro">Le texte de la rubrique « Ton objectif », selon la position de l'agent. La position se calcule ainsi : <b>contre</b> si revenu modeste ou effort ≥ 6 %, <b>pour</b> si revenu aisé ou effort ≤ 3 %, sinon <b>partagé</b>.</p>
+        <div class="champ"><label for="cfg-o-contre"><span><span class="pastille contre">contre</span></span></label><textarea id="cfg-o-contre" rows="3"></textarea></div>
+        <div class="champ"><label for="cfg-o-pour"><span><span class="pastille pour">pour</span></span></label><textarea id="cfg-o-pour" rows="3"></textarea></div>
+        <div class="champ"><label for="cfg-o-partage"><span><span class="pastille partage">partagé</span></span></label><textarea id="cfg-o-partage" rows="3"></textarea></div>
+        <div class="champ"><label for="cfg-o-sante"><span>Nuance santé <span style="opacity:.8">(ajoutée si l'ascenseur compte pour l'agent)</span></span></label><textarea id="cfg-o-sante" rows="3"></textarea>
+          <div class="aide">À vider pour supprimer cette nuance.</div></div>
+        <div class="aide">Variables utilisables dans ces textes : <code>{urgent}</code> <code>{projet}</code> <code>{budget_annuel}</code> <code>{titre}</code> <code>{lieu}</code></div>
+      </div>
+
+      <div class="carte bloc-cfg large">
+        <h3>Critère d'éligibilité</h3>
+        <p class="intro">Qui peut être tiré ou choisi pour une scène. Une condition sur les colonnes de la population (syntaxe <code>pandas query</code> : <code>==</code>, <code>!=</code>, <code>&gt;=</code>, <code>and</code>, <code>or</code>, <code>not</code>, <code>in [...]</code>). Vide : tout le monde.</p>
+        <div class="champ"><input id="cfg-elig" type="text" spellcheck="false" autocomplete="off"></div>
+        <div class="aide">Exemple : <code>logement == "proprietaire" and zone == "ville" and age_annees &gt;= 30</code></div>
+        <div class="colonnes-dispo" id="colonnes-dispo"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ======================= LANCER ======================= -->
   <section class="vue" id="v-lancer">
     <div class="entete">
-      <div><h2>Lancer une scène</h2><p>La hausse des charges de la copropriété</p></div>
+      <div><h2>Lancer une scène</h2><p id="titre-scenario"></p></div>
       <div class="segment" id="mode-seg"><button data-v="une" class="actif">Une scène</button><button data-v="serie">Série</button></div>
     </div>
 
@@ -221,7 +287,15 @@ h3.sec{font-size:19px;margin:28px 0 12px}
 
     <div class="barre-lancer" id="barre-serie" style="display:none;margin-bottom:12px">
       <span>Nombre de scènes</span><input id="nb" type="number" value="10" min="1" style="width:90px">
-      <span style="color:var(--doux);font-size:12.5px" id="serie-aide"></span>
+      <span>Agents</span>
+      <select id="mode-agents">
+        <option value="memes">Toujours les agents choisis ci-dessus</option>
+        <option value="opposes">Nouvelle paire aléatoire à chaque scène (un pour, un contre)</option>
+        <option value="aleatoire">Nouvelle paire aléatoire à chaque scène (tous les éligibles)</option>
+        <option value="optimisees">Nouvelle paire automatique optimisée (plus grand écart)</option>
+      </select>
+      <select id="taille" style="display:none"><option value="2">2 agents</option><option value="3">3 agents</option></select>
+      <div style="flex-basis:100%;color:var(--doux);font-size:12.5px" id="serie-aide"></div>
     </div>
     <button class="btn principal" id="go">▶ Jouer la scène</button>
 
@@ -261,6 +335,7 @@ async function api(url, corps){
 }
 const memo = { lire(k,d){ try{ return JSON.parse(localStorage.getItem("labo."+k)) ?? d }catch{ return d } },
                ecrire(k,v){ try{ localStorage.setItem("labo."+k, JSON.stringify(v)) }catch{} } };
+const retarder = (f, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => f(...a), ms) } };
 
 /* ---------- navigation ---------- */
 $$("nav button").forEach(b => b.onclick = () => montrer(b.dataset.vue));
@@ -271,7 +346,7 @@ function montrer(v){
   if (v === "stats") chargerStats();
 }
 
-/* ---------- réglages ---------- */
+/* ---------- réglages du modèle ---------- */
 const DEFAUTS = {ollama:"qwen3.5:4b", openai:"gpt-4o-mini", anthropic:"claude-sonnet-5-5", test:""};
 const CHAMPS = ["backend","modele","base_url","temperature","tours","max_tokens","sans_reflexion","mediateur","etiquette"];
 function lireReglages(){ const r = {}; CHAMPS.forEach(c => { const e = $("#"+c); r[c] = e.type === "checkbox" ? e.checked : e.value }); return r }
@@ -286,18 +361,76 @@ CHAMPS.forEach(c => $("#"+c).addEventListener("input", majReglages));
 $("#backend").addEventListener("change", () => { $("#modele").value = DEFAUTS[$("#backend").value]; majReglages() });
 majReglages();
 
-/* ---------- état ---------- */
-let POP = [], PARID = {}, CAPA = {}, choisis = [], modeSerie = false;
+/* ---------- configuration du scénario ---------- */
+// scenario, objectifs et critère d'éligibilité : préremplis avec les valeurs de scene.py (DEFAUT)
+const CFG_SCENARIO = ["titre","lieu","projet","urgent","budget_annuel"];
+const CFG_OBJECTIFS = ["contre","pour","partage","sante"];
+let DEFAUT = null, COLONNES = {}, seqCfg = 0;
 
-api("/api/etat").then(e => {
-  CAPA = e.capacites;
-  const noms = {zone_accord:"zone d'accord", verification_marges:"vérification des marges", marge_secrete:"marge secrète", mediateur:"médiateur", trois_agents:"trois agents"};
+function ecrireConfig(c){
+  CFG_SCENARIO.forEach(k => $("#cfg-s-" + k).value = c.scenario[k] ?? "");
+  CFG_OBJECTIFS.forEach(k => $("#cfg-o-" + k).value = c.objectifs[k] ?? "");
+  $("#cfg-elig").value = c.eligibilite ?? "";
+}
+function lireConfig(){
+  if (!DEFAUT) return null;
+  return {scenario: Object.fromEntries(CFG_SCENARIO.map(k => [k, $("#cfg-s-" + k).value])),
+          objectifs: Object.fromEntries(CFG_OBJECTIFS.map(k => [k, $("#cfg-o-" + k).value])),
+          eligibilite: $("#cfg-elig").value};
+}
+function configModifiee(c){
+  const d = DEFAUT;
+  return CFG_SCENARIO.some(k => String(c.scenario[k]).trim() !== String(d.scenario[k]).trim())
+      || CFG_OBJECTIFS.some(k => c.objectifs[k].trim() !== d.objectifs[k].trim())
+      || c.eligibilite.trim() !== d.eligibilite.trim();
+}
+function dessinerColonnes(){
+  $("#colonnes-dispo").innerHTML = "<span>Colonnes :</span>" + Object.entries(COLONNES).map(([k, v]) =>
+    `<span><code>${esc(k)}</code>${v ? " " + v.map(x => esc(x)).join(" · ") : " (nombre)"}</span>`).join("");
+}
+
+// Recalcule la population (éligibles, positions, efforts) avec la configuration courante
+async function appliquerConfig(){
+  const cfg = lireConfig(); if (!cfg) return;
+  const mon = ++seqCfg;
+  memo.ecrire("config", {base: DEFAUT, cfg});
+  $("#cfg-modif").style.display = configModifiee(cfg) ? "" : "none";
+  $("#titre-scenario").textContent = cfg.scenario.titre;
+  try {
+    const pop = await api("/api/population", {config: cfg});
+    if (mon !== seqCfg) return;                       // une saisie plus récente a pris le relais
+    POP = pop; PARID = {}; POP.forEach(a => PARID[a.id] = a);
+    $("#cfg-erreur").innerHTML = "";
+    choisis = choisis.filter(id => PARID[id] && PARID[id].eligible);
+    const el = POP.filter(a => a.eligible), n = p => el.filter(a => a.position === p).length;
+    $("#cfg-resume").textContent = el.length
+      ? `${el.length} agents éligibles sur ${POP.length} · ${n("pour")} pour · ${n("contre")} contre · ${n("partage")} partagés`
+      : `Aucun agent éligible sur ${POP.length}`;
+    dessinerPopulation(); remplirSelect(); dessinerChoix();
+  } catch (e) {
+    if (mon !== seqCfg) return;
+    $("#cfg-erreur").innerHTML = `<div class="bandeau alerte"><b>Configuration invalide.</b> ${esc(e.message)}</div>`;
+    $("#cfg-resume").textContent = "Les derniers réglages valides restent utilisés pour l'affichage.";
+  }
+}
+$$("#v-scenario input, #v-scenario textarea").forEach(e => e.addEventListener("input", retarder(appliquerConfig, 450)));
+$("#cfg-reset").onclick = () => { if (!DEFAUT) return; ecrireConfig(DEFAUT); appliquerConfig() };
+
+/* ---------- état ---------- */
+let POP = [], PARID = {}, CAPA = {}, choisis = [], modeSerie = false, modeManuel = false;
+
+api("/api/etat").then(async e => {
+  CAPA = e.capacites; DEFAUT = e.defaut; COLONNES = e.colonnes || {};
+  const noms = {zone_accord:"zone d'accord", verification_marges:"vérification des marges", marge_secrete:"marge secrète", mediateur:"médiateur", trois_agents:"trois agents", scenario_modifiable:"scénario modifiable"};
   $("#capa").innerHTML = Object.entries(CAPA).map(([k,v]) => `<span class="${v?"oui":""}">${noms[k]||k}</span>`).join("");
   if (!CAPA.mediateur) { $("#mediateur").disabled = true; $("#mediateur").parentElement.style.opacity = .5 }
-});
-api("/api/population").then(p => {
-  POP = p; p.forEach(a => PARID[a.id] = a);
-  dessinerPopulation(); remplirSelect();
+  if (!CAPA.scenario_modifiable)
+    $("#cfg-avertissement").innerHTML = `<div class="bandeau alerte">Cette version de <code>scene.py</code> ne prend pas encore en charge le scénario et les objectifs modifiables : seul le critère d'éligibilité sera appliqué.</div>`;
+  // Les modifications enregistrées ne sont reprises que si scene.py n'a pas changé depuis
+  const sauve = memo.lire("config", null);
+  ecrireConfig(sauve && JSON.stringify(sauve.base) === JSON.stringify(DEFAUT) ? sauve.cfg : DEFAUT);
+  dessinerColonnes();
+  await appliquerConfig();
 });
 
 /* ---------- population ---------- */
@@ -326,7 +459,7 @@ function dessinerPopulation(){
   $$("#pop-corps tr").forEach(tr => tr.onclick = () => ouvrirFiche(+tr.dataset.id));
 }
 async function ouvrirFiche(id){
-  const d = await api("/api/agent/" + id), a = PARID[id];
+  const d = await api("/api/agent", {id, config: lireConfig()}), a = PARID[id];
   const e = d.enjeux;
   $("#tiroir-corps").innerHTML = `
     <div style="color:var(--doux);font-size:12px" class="mono">AGENT ${id}</div>
@@ -347,7 +480,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") fermerTiroir
 /* ---------- lancer ---------- */
 function maxAgents(){ return CAPA.trois_agents ? 3 : 2 }
 function remplirSelect(){
-  $("#ajout-select").innerHTML = `<option value="">Choisir un copropriétaire…</option>` + POP.filter(a => a.eligible)
+  $("#ajout-select").innerHTML = `<option value="">Choisir un agent éligible…</option>` + POP.filter(a => a.eligible)
     .map(a => `<option value="${a.id}">${a.id} · ${esc(a.prenom)} ${esc(a.nom)} — ${POS[a.position]} (${a.effort_pct} %)</option>`).join("");
 }
 function ajouter(id){
@@ -356,14 +489,32 @@ function ajouter(id){
   choisis.push(id); dessinerChoix();
 }
 $("#ajout-btn").onclick = () => ajouter(+$("#ajout-select").value);
-$("#auto-btn").onclick = async () => { const r = await api("/api/paire", {graine: +$("#graine").value}); choisis = r.ids; dessinerChoix() };
+$("#auto-btn").onclick = async () => {
+  try { const r = await api("/api/paire", {graine: +$("#graine").value, config: lireConfig()}); choisis = r.ids; dessinerChoix() }
+  catch (e) { $("#zone-bandeau").innerHTML = `<div class="bandeau alerte">${esc(e.message)}</div>` }
+};
 $$("#mode-seg button").forEach(b => b.onclick = () => {
   $$("#mode-seg button").forEach(x => x.classList.toggle("actif", x === b));
   modeSerie = b.dataset.v === "serie";
   $("#barre-serie").style.display = modeSerie ? "flex" : "none";
   dessinerChoix();
 });
+$("#mode-agents").onchange = () => { modeManuel = true; dessinerChoix() };
 function retirer(id){ choisis = choisis.filter(x => x !== id); dessinerChoix() }
+
+// Mode de tirage des agents d'une série : cohérent avec le nombre d'agents choisis
+function majModeAgents(){
+  const m = $("#mode-agents");
+  m.querySelector('[value="memes"]').disabled = choisis.length < 2;
+  if (choisis.length < 2 && m.value === "memes") m.value = "opposes";
+  else if (choisis.length >= 2 && !modeManuel) m.value = "memes";
+  $("#taille").style.display = (CAPA.trois_agents && m.value !== "memes" && m.value !== "optimisees") ? "" : "none";
+  $("#serie-aide").textContent = {
+    memes: "Les agents choisis ci-dessus rejouent la scène à chaque fois.",
+    opposes: "Chaque scène oppose un agent « pour » (qui commence) et un agent « contre » tirés au hasard parmi les éligibles. Les agents choisis ci-dessus sont ignorés ; la graine rend le tirage reproductible.",
+    aleatoire: "Chaque scène réunit des agents tirés au hasard parmi tous les éligibles, quelle que soit leur position. Les agents choisis ci-dessus sont ignorés ; la graine rend le tirage reproductible.",
+    optimisees: "Chaque scène utilise la paire automatique (grand écart d'effort, faible agréabilité) pour la graine, la graine + 1, la graine + 2…"}[m.value];
+}
 
 async function dessinerChoix(){
   $("#cartes").innerHTML = choisis.map((id, k) => { const a = PARID[id]; return `
@@ -377,18 +528,21 @@ async function dessinerChoix(){
       ${a.traits ? `<div class="traits">${esc(a.traits)}</div>` : ""}
     </div>`}).join("") || `<div class="carte vide" style="grid-column:1/-1">Ajoute des agents, ou tire une paire automatique.</div>`;
 
-  $("#serie-aide").textContent = choisis.length >= 2 ? "toujours avec ces agents" : "une paire tirée par graine, à partir de la graine indiquée";
+  majModeAgents();
+  const aleatoire = modeSerie && $("#mode-agents").value !== "memes";
   $("#go").textContent = modeSerie ? "▶ Lancer la série" : "▶ Jouer la scène";
-  $("#go").disabled = !modeSerie && choisis.length < 2;
+  $("#go").disabled = modeSerie ? (!aleatoire && choisis.length < 2) : choisis.length < 2;
   $$("#pop-corps tr").forEach(tr => tr.classList.toggle("choisi", choisis.includes(+tr.dataset.id)));
 
   const zb = $("#zone-bandeau"); zb.innerHTML = "";
   if (choisis.length < 2) return;
-  const {zone} = await api("/api/zone", {ids: choisis});
-  if (zone == null) zb.innerHTML = `<div class="bandeau neutre">Zone d'accord non calculée par cette version du projet.</div>`;
-  else if (!zone.length) zb.innerHTML = `<div class="bandeau alerte"><b>Zone d'accord vide.</b> Aucune option n'est acceptable pour tous : la négociation devrait échouer.</div>`;
-  else zb.innerHTML = `<div class="bandeau info"><b>${zone.length} option${zone.length>1?"s":""} acceptable${zone.length>1?"s":""}</b> pour tous les agents.
-     <details style="margin-left:auto"><summary style="cursor:pointer">voir</summary><pre class="mono" style="font-size:12px;white-space:pre-wrap">${esc(zone.map(z => typeof z === "string" ? z : JSON.stringify(z)).join("\n"))}</pre></details></div>`;
+  try {
+    const {zone} = await api("/api/zone", {ids: choisis});
+    if (zone == null) zb.innerHTML = `<div class="bandeau neutre">Zone d'accord non calculée par cette version du projet.</div>`;
+    else if (!zone.length) zb.innerHTML = `<div class="bandeau alerte"><b>Zone d'accord vide.</b> Aucune option n'est acceptable pour tous : la négociation devrait échouer.</div>`;
+    else zb.innerHTML = `<div class="bandeau info"><b>${zone.length} option${zone.length>1?"s":""} acceptable${zone.length>1?"s":""}</b> pour tous les agents.
+       <details style="margin-left:auto"><summary style="cursor:pointer">voir</summary><pre class="mono" style="font-size:12px;white-space:pre-wrap">${esc(zone.map(z => typeof z === "string" ? z : JSON.stringify(z)).join("\n"))}</pre></details></div>`;
+  } catch (e) { zb.innerHTML = `<div class="bandeau alerte">${esc(e.message)}</div>` }
 }
 
 function cote(loc, noms){
@@ -414,11 +568,18 @@ function verdict(r){
 
 $("#go").onclick = async () => {
   const reg = lireReglages();
+  const memes = !modeSerie || $("#mode-agents").value === "memes";
   const corps = {reglages: reg, etiquette: reg.etiquette, n: modeSerie ? +$("#nb").value : 1,
-                 ids: choisis.length >= 2 ? choisis : [], graine: +$("#graine").value};
+                 ids: memes ? choisis : [], graine: +$("#graine").value, config: lireConfig(),
+                 mode_agents: modeSerie ? $("#mode-agents").value : "memes", taille: +$("#taille").value};
   $("#go").disabled = true;
-  const {job} = await api("/api/lancer", corps);
-  modeSerie ? suivreSerie(job, corps.n) : suivreScene(job);
+  try {
+    const {job} = await api("/api/lancer", corps);
+    modeSerie ? await suivreSerie(job, corps.n) : await suivreScene(job);
+  } catch (e) {
+    $("#sortie").innerHTML = `<div class="bandeau alerte" style="margin-top:20px">${esc(e.message)}</div>`;
+    dessinerChoix();
+  }
 };
 
 async function suivreScene(job){
@@ -429,6 +590,7 @@ async function suivreScene(job){
     if (j.lignes.length) $("#dlg").innerHTML = bulles(j.lignes.map(decouper), noms) + (j.etat === "fini" ? "" : `<div class="ecrit">…</div>`);
     if (j.etat === "fini"){
       const r = j.resultats[0];
+      if (!r){ $("#dlg").innerHTML = `<div class="ecrit">${esc(j.erreur_job || "Aucun résultat.")}</div>`; $("#go").disabled = false; return }
       if (!j.lignes.length && r.dialogue.length) $("#dlg").innerHTML = bulles(r.dialogue, r.noms);
       if (!r.dialogue.length) $("#dlg").innerHTML = `<div class="ecrit">Aucune réplique.</div>`;
       $("#vd").innerHTML = verdict(r); $("#go").disabled = false; return;
@@ -445,9 +607,9 @@ async function suivreSerie(job, n){
   while (true){
     const j = await api("/api/job/" + job);
     $("#sr-n").textContent = `${j.fait} / ${n}`; $("#sr-barre").style.width = (100 * j.fait / n) + "%";
-    $("#sr-courante").textContent = j.etat === "fini" ? "Terminé. Les résultats sont dans Statistiques." :
+    $("#sr-courante").textContent = j.etat === "fini" ? (j.erreur_job ? "Interrompu : " + j.erreur_job : "Terminé. Les résultats sont dans Statistiques.") :
       `Scène ${j.courante + 1} : ${j.agents.map(a => a.nom).join(" / ")} · ${j.lignes.length} réplique(s)`;
-    $("#sr-corps").innerHTML = j.resultats.map(r => `<tr><td>${esc(r.noms.join(" / "))}</td><td>${ouinon(r.accord)}</td><td>${ouinon(r.coherent)}</td>
+    $("#sr-corps").innerHTML = j.resultats.map(r => `<tr><td>${r.noms.map((nom, i) => `${esc(nom)} <span class="pastille ${r.positions[i]}">${POS[r.positions[i]] || ""}</span>`).join(" / ")}</td><td>${ouinon(r.accord)}</td><td>${ouinon(r.coherent)}</td>
       <td>${r.mediateur ? "oui" : "non"}</td><td>${ouinon(r.zone_vide)}</td><td class="mono">${r.erreur ? `<span class="non" title="${esc(r.erreur)}">erreur</span>` : r.duree_s + " s"}</td></tr>`).join("");
     if (j.etat === "fini"){ $("#go").disabled = false; return }
     await new Promise(r => setTimeout(r, 800));
@@ -471,17 +633,18 @@ function voirScene(k){
   const s = SCENES[k];
   $("#sc-detail").innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       ${s.noms.map((n, i) => `<span class="pastille ${s.positions[i]}">${esc(n)} · ${POS[s.positions[i]] || s.positions[i]}</span>`).join("")}
-      <span style="color:var(--doux);font-size:12.5px;margin-left:auto" class="mono">T=${s.temperature} · ${s.tours_max} répliques max${s.tour_accord ? " · accord à la réplique " + s.tour_accord : ""}</span></div>
+      <span style="color:var(--doux);font-size:12.5px;margin-left:auto" class="mono">T=${s.temperature} · ${s.tours_max} répliques max${s.tour_accord ? " · accord à la réplique " + s.tour_accord : ""}${s.config_id ? " · config " + esc(s.config_id) : ""}</span></div>
     ${verdict(s)}
     <div class="carte dialogue">${s.dialogue.length ? bulles(s.dialogue, s.noms) : `<div class="ecrit">Aucune réplique.</div>`}</div>
-    <details style="margin-top:12px;color:var(--doux);font-size:13px"><summary style="cursor:pointer">Contrôles et zone d'accord</summary>
-      <pre class="fiche">${esc(JSON.stringify({controles: s.controles, zone_vide: s.zone_vide, zone: s.zone}, null, 2))}</pre></details>`;
+    <details style="margin-top:12px;color:var(--doux);font-size:13px"><summary style="cursor:pointer">Contrôles, zone d'accord et configuration</summary>
+      <pre class="fiche">${esc(JSON.stringify({controles: s.controles, zone_vide: s.zone_vide, zone: s.zone, mode_agents: s.mode_agents, config: s.config}, null, 2))}</pre></details>`;
 }
 
 /* ---------- statistiques ---------- */
 const filtres = {modele: [], etiquette: [], serie: []};
 let groupe = ["modele_complet"], DERNIER = null;
-const GROUPES = {modele_complet:"modèle", temperature:"température", etiquette:"étiquette", tours_max:"répliques max", mediateur_actif:"médiateur activé", serie:"série"};
+const GROUPES = {modele_complet:"modèle", temperature:"température", etiquette:"étiquette", tours_max:"répliques max", mediateur_actif:"médiateur activé", serie:"série",
+                 scenario_titre:"scénario", config_id:"configuration", mode_agents:"tirage des agents"};
 
 async function chargerStats(){
   const q = new URLSearchParams();
@@ -494,7 +657,6 @@ async function chargerStats(){
      `<button class="puce ${filtres[cle].includes(v) ? "actif" : ""}" data-f="${cle}" data-v="${esc(v)}">${esc(etiq(v))}</button>`).join("") || '<span style="color:var(--doux)">—</span>'}</div>`;
   const kpi = (t, v, s = "") => `<div class="carte kpi"><small>${t}</small><b>${v}</b><span>${s}</span></div>`;
   const g = d.groupes;
-  const maxAcc = 1;
   $("#st-contenu").innerHTML = `
     <div class="bloc-filtres">
       <span>Modèles</span>${puces("modele", d.filtres.modeles)}
@@ -520,9 +682,9 @@ async function chargerStats(){
          <td class="mono">${r.tour_accord_moyen != null ? r.tour_accord_moyen.toFixed(1) : "—"}</td><td class="mono">${r.mal_formees}</td>
          <td class="mono">${r.duree_moyenne_s != null ? r.duree_moyenne_s.toFixed(1) + " s" : "—"}</td></tr>`).join("")}</tbody></table></div>` : ""}
     <h3 class="sec">Toutes les scènes</h3>
-    <div class="carte tableau-wrap" style="max-height:480px"><table><thead><tr><th>Date</th><th>Agents</th><th>Modèle</th><th>T°</th><th>Étiquette</th><th>Accord</th><th>Cohérent</th><th>Médiateur</th><th>Zone vide</th><th>Répliques</th><th>Durée</th></tr></thead>
+    <div class="carte tableau-wrap" style="max-height:480px"><table><thead><tr><th>Date</th><th>Agents</th><th>Modèle</th><th>T°</th><th>Étiquette</th><th>Scénario</th><th>Accord</th><th>Cohérent</th><th>Médiateur</th><th>Zone vide</th><th>Répliques</th><th>Durée</th></tr></thead>
       <tbody>${d.scenes.map(s => `<tr><td class="mono">${s.date.replace("T", " ")}</td><td>${esc(s.agents)}</td><td>${esc(s.modele_complet)}</td><td class="mono">${s.temperature}</td>
-        <td>${esc(s.etiquette || "")}</td><td>${s.erreur ? '<span class="non">erreur</span>' : ouinon(s.accord)}</td><td>${ouinon(s.coherent)}</td><td>${s.mediateur ? "oui" : "non"}</td>
+        <td>${esc(s.etiquette || "")}</td><td title="configuration ${esc(s.config_id || "")}">${esc(s.scenario_titre || "")}</td><td>${s.erreur ? '<span class="non">erreur</span>' : ouinon(s.accord)}</td><td>${ouinon(s.coherent)}</td><td>${s.mediateur ? "oui" : "non"}</td>
         <td>${ouinon(s.zone_vide)}</td><td class="mono">${s.repliques}</td><td class="mono">${s.duree_s} s</td></tr>`).join("")}</tbody></table></div>`;
   $$("[data-f]").forEach(b => b.onclick = () => { const l = filtres[b.dataset.f], v = b.dataset.v; l.includes(v) ? l.splice(l.indexOf(v), 1) : l.push(v); chargerStats() });
   $$("[data-g]").forEach(b => b.onclick = () => { const v = b.dataset.g; groupe.includes(v) ? groupe = groupe.filter(x => x !== v) : groupe.push(v); chargerStats() });

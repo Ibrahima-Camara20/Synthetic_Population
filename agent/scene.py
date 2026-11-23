@@ -14,6 +14,14 @@ Population synthétique - Partie 2 : scène automatique entre deux agents
 5. On exporte la scène (Markdown, JSON, texte pour la synthèse vocale) et,
    en option, un fichier audio avec ElevenLabs.
 
+Trois réglages sont modifiables (depuis le labo, ou en changeant les valeurs
+ci-dessous) :
+    SCENARIO              le contexte : titre, lieu, budget, projet, travaux urgents
+    OBJECTIFS             le texte de l'objectif donné à l'agent selon sa position
+                          (variables : {urgent}, {projet}, {budget_annuel}, {titre}, {lieu})
+    CRITERE_ELIGIBILITE   qui peut participer : une condition sur les colonnes de
+                          population_agents.csv (syntaxe de pandas.DataFrame.query)
+
 Exemples :
     python scene.py --backend test                       # sans modèle, pour tester
     python scene.py --backend openai --modele gpt-4o-mini
@@ -48,38 +56,74 @@ SCENARIO = {
     "urgent": "la fuite au sous-sol et la porte du local poubelles",
 }
 
+# Objectif donné à l'agent selon sa position (calculée dans enjeux()).
+#   contre   : revenu modeste, ou effort >= 6 % du revenu
+#   pour     : revenu aisé, ou effort <= 3 % du revenu
+#   partage  : tous les autres
+#   sante    : phrase ajoutée si la santé de l'agent rend l'ascenseur important
+#              (problème de santé et étage >= 2) ; laisser vide pour la supprimer
+# Dans les textes, {urgent}, {projet}, {budget_annuel}, {titre} et {lieu} sont
+# remplacés par les valeurs du scénario.
+OBJECTIFS = {
+    "contre": "Empêcher la hausse des charges. Tu acceptes au plus les réparations "
+              "urgentes ({urgent}), pas le reste.",
+    "pour": "Faire voter tout le projet : plus de confort, un immeuble plus haut "
+            "de gamme, et la valeur de ton appartement qui monte.",
+    "partage": "Tu hésites : tu veux bien un peu de confort, mais pas à n'importe quel prix. "
+               "Tu cherches à réduire le projet.",
+    "sante": "Mais ta santé rend l'ascenseur important pour toi : sur ce point précis, "
+             "tu peux te montrer plus ouvert(e).",
+}
 
-def enjeux(p, scenario=SCENARIO):
+# Qui peut participer : condition sur les colonnes de population_agents.csv
+# (syntaxe de DataFrame.query). Une chaîne vide = tout le monde.
+CRITERE_ELIGIBILITE = 'logement == "proprietaire" and zone == "ville"'
+
+_CRITERE_SUR = re.compile(r"^[\w\s\"'<>=!&|().,~+\-*/%\[\]]*$")
+
+
+def _remplir(modele, scenario):
+    """Remplace {urgent}, {projet}... par les valeurs du scénario (le reste est laissé tel quel)."""
+    valeurs = {k: str(v) for k, v in scenario.items()}
+    return re.sub(r"\{(\w+)\}", lambda m: valeurs.get(m.group(1), m.group(0)), modele)
+
+
+def enjeux(p, scenario=SCENARIO, objectifs=OBJECTIFS):
     """Ce que le projet coûte à la persona et l'objectif qui en découle."""
+    objectifs = {**OBJECTIFS, **(objectifs or {})}
     part_annuelle = p["tantiemes"] / 1000 * scenario["budget_annuel"]
     mensuel = part_annuelle / 12
     effort = mensuel / p["revenu_mensuel"]
     if p["revenu"] == "modeste" or effort >= 0.06:
         position = "contre"
-        objectif = ("Empêcher la hausse des charges. Tu acceptes au plus les réparations "
-                    f"urgentes ({scenario['urgent']}), pas le reste.")
     elif p["revenu"] == "aise" or effort <= 0.03:
         position = "pour"
-        objectif = ("Faire voter tout le projet : plus de confort, un immeuble plus haut "
-                    "de gamme, et la valeur de ton appartement qui monte.")
     else:
         position = "partage"
-        objectif = ("Tu hésites : tu veux bien un peu de confort, mais pas à n'importe quel prix. "
-                    "Tu cherches à réduire le projet.")
+    objectif = _remplir(objectifs[position], scenario)
     # Nuance tirée de la santé (A10) : l'ascenseur compte pour qui se déplace mal
-    if p.get("sante", "bonne sante") != "bonne sante" and p["etage"] >= 2:
-        objectif += (" Mais ta santé rend l'ascenseur important pour toi : sur ce point précis, "
-                     "tu peux te montrer plus ouvert(e).")
+    if p.get("sante", "bonne sante") != "bonne sante" and p["etage"] >= 2 and objectifs["sante"].strip():
+        objectif += " " + _remplir(objectifs["sante"], scenario)
     return {"part_annuelle": round(part_annuelle), "mensuel": round(mensuel),
             "effort_pct": round(100 * effort, 1), "position": position, "objectif": objectif}
 
 
-def eligibles(df):
-    """Copropriétaires d'un immeuble en ville, adultes."""
-    return df[(df["logement"] == "proprietaire") & (df["zone"] == "ville")].copy()
+def eligibles(df, critere=CRITERE_ELIGIBILITE):
+    """Agents qui répondent au critère d'éligibilité (par défaut : copropriétaires en ville)."""
+    critere = " ".join((critere or "").split())
+    if not critere:
+        return df.copy()
+    if "__" in critere or not _CRITERE_SUR.match(critere):
+        raise ValueError("Critère d'éligibilité non autorisé : utilisez seulement des noms de "
+                         "colonnes, des comparaisons et and / or / not.")
+    try:
+        return df.query(critere).copy()
+    except Exception as e:                                   # noqa: BLE001
+        raise ValueError(f"Critère d'éligibilité invalide : {e}") from e
 
 
-def choisir_paire(df, rng, ids=None):
+def choisir_paire(df, rng, ids=None, scenario=SCENARIO, objectifs=OBJECTIFS,
+                  critere=CRITERE_ELIGIBILITE):
     """Deux copropriétaires aux intérêts opposés (un « pour », un « contre »).
     Parmi les paires possibles, on favorise un grand écart d'effort financier et
     une faible agréabilité (plus de chances de vrai désaccord), puis on tire au
@@ -87,8 +131,10 @@ def choisir_paire(df, rng, ids=None):
     if ids:
         a, b = (df[df["id"] == i].iloc[0] for i in ids)
         return a, b
-    el = eligibles(df)
-    ej = [enjeux(p) for _, p in el.iterrows()]
+    el = eligibles(df, critere)
+    if el.empty:
+        raise SystemExit("Aucun agent ne répond au critère d'éligibilité.")
+    ej = [enjeux(p, scenario, objectifs) for _, p in el.iterrows()]
     el["position"] = [e["position"] for e in ej]
     el["effort"] = [e["effort_pct"] for e in ej]
     pour, contre = el[el["position"] == "pour"], el[el["position"] == "contre"]
@@ -148,7 +194,7 @@ def nettoyer(texte, prenoms):
 # ---------------------------------------------------------------------------
 # Backend de test : des répliques construites à partir des fiches
 # ---------------------------------------------------------------------------
-def replique_test(p, e, tour, dernier):
+def replique_test(p, e, tour, dernier, scenario=SCENARIO):
     if dernier:
         return ("Très bien, on en reparlera à l'assemblée générale." if e["position"] == "pour"
                 else "On votera, et je viendrai avec mes voix. Bonne soirée.")
@@ -162,7 +208,7 @@ def replique_test(p, e, tour, dernier):
     contre = [
         f"J'ai fait le calcul : {e['mensuel']} € de plus par mois. C'est {round(e['effort_pct'])} % de ce que je touche.",
         "Je ne vends pas, moi. Ce hall me convient très bien.",
-        f"Réparer ce qui est cassé, d'accord : {SCENARIO['urgent']}. Le reste, non.",
+        f"Réparer ce qui est cassé, d'accord : {scenario['urgent']}. Le reste, non.",
         "Payer en plusieurs fois, ça reste payer.",
         "Venez avec vos arguments en assemblée, je viendrai avec les miens.",
     ]
@@ -173,9 +219,9 @@ def replique_test(p, e, tour, dernier):
 # ---------------------------------------------------------------------------
 # Moteur de dialogue
 # ---------------------------------------------------------------------------
-def jouer_scene(a, b, client, tours=12, scenario=SCENARIO, verbeux=True):
+def jouer_scene(a, b, client, tours=12, scenario=SCENARIO, verbeux=True, objectifs=OBJECTIFS):
     """a commence (c'est celui qui veut le changement). Renvoie la liste des répliques."""
-    ea, eb = enjeux(a, scenario), enjeux(b, scenario)
+    ea, eb = enjeux(a, scenario, objectifs), enjeux(b, scenario, objectifs)
     agents = [(a, b, ea, consigne(a, b, ea, scenario, commence=True)),
               (b, a, eb, consigne(b, a, eb, scenario))]
     dialogue = []
@@ -183,7 +229,7 @@ def jouer_scene(a, b, client, tours=12, scenario=SCENARIO, verbeux=True):
         p, autre, e, systeme = agents[tour % 2]
         dernier = tour >= tours - 2
         if client.backend == "test":
-            texte = replique_test(p, e, tour, dernier)
+            texte = replique_test(p, e, tour, dernier, scenario)
         else:
             # Vue de l'agent : ses répliques = assistant, celles de l'autre = user
             messages = [{"role": "user", "content": "[La scène commence.]"}] if tour % 2 == 0 else []
@@ -213,12 +259,12 @@ def verifier(dialogue, a, b):
     }
 
 
-def exporter(a, b, ea, eb, dialogue, controles, client, dossier):
+def exporter(a, b, ea, eb, dialogue, controles, client, dossier, scenario=SCENARIO):
     os.makedirs(dossier, exist_ok=True)
     base = os.path.join(dossier, f"scene_{a['id']}_{b['id']}")
-    md = [f"# {SCENARIO['titre']}", "",
-          f"*Lieu : {SCENARIO['lieu']}.*", "",
-          f"*Projet : {SCENARIO['projet']}.*", "",
+    md = [f"# {scenario['titre']}", "",
+          f"*Lieu : {scenario['lieu']}.*", "",
+          f"*Projet : {scenario['projet']}.*", "",
           f"*Modèle : {client.backend} {client.modele or ''}*", "", "## Les personas", ""]
     for p, e in ((a, ea), (b, eb)):
         md += [f"### {p['prenom']} {p['nom']} (individu {p['id']} de la population)", "",
@@ -233,7 +279,7 @@ def exporter(a, b, ea, eb, dialogue, controles, client, dossier):
     with open(base + ".txt", "w", encoding="utf-8") as f:
         f.write("\n".join(f"{n}: {r}" for n, r in dialogue))
     with open(base + ".json", "w", encoding="utf-8") as f:
-        json.dump({"scenario": SCENARIO,
+        json.dump({"scenario": scenario,
                    "personas": [{**{k: (v.item() if hasattr(v, "item") else v) for k, v in p.items()},
                                  "enjeux": e} for p, e in ((a, ea), (b, eb))],
                    "dialogue": [{"locuteur": n, "texte": r} for n, r in dialogue],
@@ -254,6 +300,9 @@ def main():
     ap.add_argument("--tours", type=int, default=12, help="nombre total de répliques")
     ap.add_argument("--graine", type=int, default=0, help="change la paire choisie")
     ap.add_argument("--ids", help="forcer deux individus, ex. 12,345 (le premier commence)")
+    ap.add_argument("--critere", default=CRITERE_ELIGIBILITE,
+                    help="critère d'éligibilité (syntaxe DataFrame.query), "
+                         f"par défaut : {CRITERE_ELIGIBILITE}")
     ap.add_argument("--population", default=os.path.join(ICI, "population_agents.csv"))
     ap.add_argument("--sortie", default=os.path.join(ICI, "scenes"))
     ap.add_argument("--voix", action="store_true", help="générer l'audio avec ElevenLabs")
@@ -279,7 +328,10 @@ def main():
 
     rng = np.random.default_rng(args.graine)
     ids = [int(x) for x in args.ids.split(",")] if args.ids else None
-    a, b = choisir_paire(df, rng, ids)
+    try:
+        a, b = choisir_paire(df, rng, ids, critere=args.critere)
+    except ValueError as e:
+        sys.exit(f"Erreur : {e}")
 
     print(f"=== {SCENARIO['titre']} ===\n")
     for p in (a, b):

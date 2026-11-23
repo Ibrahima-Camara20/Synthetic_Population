@@ -7,6 +7,10 @@ labo.html et répond à ses demandes en appelant le code du projet via
 adaptateur.py. Les scènes tournent en arrière-plan ; la page suit leur
 progression réplique par réplique.
 
+La page envoie avec chaque demande la configuration choisie (scénario,
+objectifs, critère d'éligibilité) : le serveur la valide, recalcule les
+agents éligibles et leurs enjeux, puis la transmet aux scènes.
+
 Lancement (depuis le dossier agent/) :
     python serveur.py            -> http://localhost:8000
     python serveur.py 8080       -> autre port
@@ -34,13 +38,12 @@ COLONNES = ["id", "prenom", "nom", "age_annees", "age", "sexe_fiche", "situation
             "ouverture", "conscienciosite", "extraversion", "agreabilite", "nevrosisme",
             "traits", "particularites"]
 
+MODES_AGENTS = ("memes", "optimisees", "opposes", "aleatoire")
+
 # ---------------------------------------------------------------------------
 # Population (chargée une fois)
 # ---------------------------------------------------------------------------
 DF = ad.charger_population()
-_el = ad.eligibles(DF)
-ELIGIBLES = set(int(i) for i in _el["id"])
-ENJEUX = {int(p["id"]): ad.enjeux(p) for _, p in _el.iterrows()}
 
 JOBS = {}                     # id -> état d'une scène ou d'une série en cours
 VERROU = threading.Lock()
@@ -59,46 +62,87 @@ def propre(x):
     return x
 
 
-def population():
+def contexte(config=None):
+    """Valide la configuration puis calcule les agents éligibles et leurs enjeux.
+    Renvoie (config normalisée, ensemble des id éligibles, enjeux par id)."""
+    cfg = ad.normaliser_config(config)
+    el = ad.eligibles(DF, cfg)
+    ids = {int(i) for i in el["id"]}
+    enj = {int(p["id"]): ad.enjeux(p, cfg) for _, p in el.iterrows()}
+    return cfg, ids, enj
+
+
+def population(ctx):
+    _, ids, enj = ctx
     lignes = []
     for _, p in DF[COLONNES].iterrows():
         d = {c: p[c] for c in COLONNES}
         i = int(p["id"])
-        e = ENJEUX.get(i)
-        d.update(eligible=i in ELIGIBLES, position=e["position"] if e else "",
+        e = enj.get(i)
+        d.update(eligible=i in ids, position=e["position"] if e else "",
                  effort_pct=e["effort_pct"] if e else None, mensuel=e["mensuel"] if e else None)
         lignes.append(d)
     return lignes
 
 
-def detail_agent(i):
+def detail_agent(i, ctx):
+    _, _, enj = ctx
     p = ad.agent(DF, i)
     return {"id": int(i), "nom": f"{p['prenom']} {p['nom']}", "fiche": ad.fiche(p),
-            "enjeux": ENJEUX.get(int(i)), "marge": ad.marge(p)}
+            "enjeux": enj.get(int(i)), "marge": ad.marge(p)}
 
 
 # ---------------------------------------------------------------------------
 # Scènes en arrière-plan
 # ---------------------------------------------------------------------------
-def _executer(job_id, plan, reglages, etiquette):
+def _executer(job_id, plan, reglages, etiquette, ctx, mode):
     job = JOBS[job_id]
+    cfg = ctx[0]
     serie = job_id if len(plan) > 1 else None
-    for k, ids in enumerate(plan):
-        agents = [ad.agent(DF, i) for i in ids]
-        with VERROU:
-            job.update(courante=k, lignes=[], agents=[detail_agent(i) for i in ids])
-
-        def rappel(l):
+    try:
+        for k, ids in enumerate(plan):
+            agents = [ad.agent(DF, i) for i in ids]
             with VERROU:
-                job["lignes"].append(l)
+                job.update(courante=k, lignes=[], agents=[detail_agent(i, ctx) for i in ids])
 
-        r = ad.lancer_scene(agents, rappel=rappel, **reglages)
-        ligne = journal.ajouter(r, serie=serie, etiquette=etiquette)
+            def rappel(l):
+                with VERROU:
+                    job["lignes"].append(l)
+
+            r = ad.lancer_scene(agents, rappel=rappel, config=cfg, **reglages)
+            r["mode_agents"] = mode
+            ligne = journal.ajouter(r, serie=serie, etiquette=etiquette)
+            with VERROU:
+                job["resultats"].append(propre(ligne))
+                job["fait"] = k + 1
+    except Exception as e:                             # noqa: BLE001
         with VERROU:
-            job["resultats"].append(propre(ligne))
-            job["fait"] = k + 1
-    with VERROU:
-        job["etat"] = "fini"
+            job["erreur_job"] = f"{type(e).__name__} : {e}"
+    finally:
+        with VERROU:
+            job["etat"] = "fini"
+
+
+def construire_plan(corps, ctx):
+    """Liste des groupes d'agents (identifiants) à jouer, un groupe par scène."""
+    cfg = ctx[0]
+    n = max(1, int(corps.get("n", 1)))
+    ids = [int(i) for i in corps.get("ids", [])]
+    graine = int(corps.get("graine", 0))
+    mode = corps.get("mode_agents") or ("memes" if len(ids) >= 2 else "optimisees")
+    if mode not in MODES_AGENTS:
+        raise ValueError(f"Mode de tirage inconnu : {mode}")
+    taille = 3 if int(corps.get("taille", 2)) == 3 and ad.capacites()["trois_agents"] else 2
+
+    if mode == "memes":
+        if len(ids) < 2:
+            raise ValueError("Choisissez au moins deux agents, ou un tirage aléatoire.")
+        plan = [ids] * n
+    elif mode == "optimisees":
+        plan = [[int(p["id"]) for p in ad.choisir_paire(DF, graine + k, cfg=cfg)] for k in range(n)]
+    else:                                              # « opposes » ou « aleatoire »
+        plan = ad.tirer_groupes(DF, n, graine, taille, mode == "opposes", cfg)
+    return plan, mode
 
 
 def lancer(corps):
@@ -109,17 +153,13 @@ def lancer(corps):
                     max_tokens=int(r.get("max_tokens", 400)),
                     sans_reflexion=bool(r.get("sans_reflexion", True)),
                     mediateur=bool(r.get("mediateur", True)))
-    n = max(1, int(corps.get("n", 1)))
-    ids = [int(i) for i in corps.get("ids", [])]
-    graine = int(corps.get("graine", 0))
-    if len(ids) >= 2:
-        plan = [ids] * n
-    else:
-        plan = [[int(p["id"]) for p in ad.choisir_paire(DF, graine + k)] for k in range(n)]
+    ctx = contexte(corps.get("config"))
+    plan, mode = construire_plan(corps, ctx)
     job_id = uuid.uuid4().hex[:8]
-    JOBS[job_id] = {"etat": "en cours", "total": n, "fait": 0, "courante": 0,
-                    "lignes": [], "agents": [], "resultats": []}
-    threading.Thread(target=_executer, args=(job_id, plan, reglages, corps.get("etiquette", "")),
+    JOBS[job_id] = {"etat": "en cours", "total": len(plan), "fait": 0, "courante": 0,
+                    "lignes": [], "agents": [], "resultats": [], "plan": plan, "mode": mode}
+    threading.Thread(target=_executer,
+                     args=(job_id, plan, reglages, corps.get("etiquette", ""), ctx, mode),
                      daemon=True).start()
     return {"job": job_id}
 
@@ -136,6 +176,7 @@ def statistiques(q):
             t = t[t[col].fillna("").isin(q[cle])]
     groupe = [g for g in q.get("groupe", ["modele_complet"]) if g in t.columns]
     cols = ["scene_id", "date", "agents", "modele_complet", "temperature", "etiquette", "serie",
+            "scenario_titre", "config_id", "mode_agents",
             "accord", "coherent", "mediateur", "zone_vide", "tour_accord", "repliques",
             "mal_formees", "duree_s", "erreur"]
     return propre({
@@ -179,11 +220,11 @@ class Gestionnaire(BaseHTTPRequestHandler):
                 self.wfile.write(data)
             elif u.path == "/api/etat":
                 self._json({"capacites": ad.capacites(), "nb_agents": len(DF),
-                            "nb_eligibles": len(ELIGIBLES)})
+                            "defaut": ad.config_defaut(), "colonnes": ad.colonnes_info(DF)})
             elif u.path == "/api/population":
-                self._json(population())
+                self._json(population(contexte()))
             elif u.path.startswith("/api/agent/"):
-                self._json(detail_agent(int(u.path.rsplit("/", 1)[1])))
+                self._json(detail_agent(int(u.path.rsplit("/", 1)[1]), contexte()))
             elif u.path.startswith("/api/job/"):
                 job = JOBS.get(u.path.rsplit("/", 1)[1])
                 with VERROU:
@@ -194,6 +235,8 @@ class Gestionnaire(BaseHTTPRequestHandler):
                 self._json(statistiques(q))
             else:
                 self._json({"erreur": "introuvable"}, 404)
+        except ValueError as e:
+            self._json({"erreur": str(e)}, 400)
         except Exception as e:                       # noqa: BLE001
             self._json({"erreur": f"{type(e).__name__} : {e}"}, 500)
 
@@ -201,8 +244,13 @@ class Gestionnaire(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         try:
             corps = self._corps()
-            if u.path == "/api/paire":
-                ids = [int(p["id"]) for p in ad.choisir_paire(DF, int(corps.get("graine", 0)))]
+            if u.path == "/api/population":
+                self._json(population(contexte(corps.get("config"))))
+            elif u.path == "/api/agent":
+                self._json(detail_agent(int(corps["id"]), contexte(corps.get("config"))))
+            elif u.path == "/api/paire":
+                cfg = ad.normaliser_config(corps.get("config"))
+                ids = [int(p["id"]) for p in ad.choisir_paire(DF, int(corps.get("graine", 0)), cfg=cfg)]
                 self._json({"ids": ids})
             elif u.path == "/api/zone":
                 agents = [ad.agent(DF, i) for i in corps.get("ids", [])]
@@ -214,6 +262,8 @@ class Gestionnaire(BaseHTTPRequestHandler):
                 self._json({"ok": True})
             else:
                 self._json({"erreur": "introuvable"}, 404)
+        except ValueError as e:                      # configuration ou demande invalide
+            self._json({"erreur": str(e)}, 400)
         except Exception as e:                       # noqa: BLE001
             self._json({"erreur": f"{type(e).__name__} : {e}"}, 500)
 
