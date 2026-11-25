@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Labo des agents</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* =========================================================================
+   Labo des agents — « cahier d'étude »
+   Mise en page d'une publication statistique : chaque résultat est une
+   figure ou un tableau numéroté, avec sa légende et ses notes de lecture.
+   ========================================================================= */
+:root{
+  --papier:#fcfcfa; --bloc:#ffffff; --encre:#14171c; --encre2:#596170; --encre3:#8b919c;
+  --filet:#dcd9d2; --filet2:#c3bfb6; --creux:#f4f3ef;
+  --navy:#1c3f6e; --navy-pale:#e7edf5;
+  --pour:#2d6a9f; --pour-pale:#e6eef6; --contre:#9c4a2f; --contre-pale:#f7eae5;
+  --partage:#866413; --partage-pale:#f6f0dc; --syndic:#5d4e86; --syndic-pale:#eeebf5;
+  --oui:#2a6b4f; --oui-pale:#e4f0ea; --non:#9c3a2c; --non-pale:#f8e8e4;
+  --serif:"Spectral",Palatino,Georgia,serif;
+  --sans:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --r:3px; --mesure:72ch;
+}
+@media (prefers-color-scheme:dark){:root{
+  --papier:#15171a; --bloc:#1b1e22; --encre:#e9e8e4; --encre2:#a0a5ad; --encre3:#787e88;
+  --filet:#2f3338; --filet2:#444951; --creux:#202428;
+  --navy:#8fb0dd; --navy-pale:#1d2b3d;
+  --pour:#7cacdb; --pour-pale:#1a2634; --contre:#dd9173; --contre-pale:#32211b;
+  --partage:#d4b45e; --partage-pale:#2c2616; --syndic:#b4a3e0; --syndic-pale:#262038;
+  --oui:#63c296; --oui-pale:#163026; --non:#ef8d7a; --non-pale:#36201c;}}
+
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--papier);color:var(--encre);font:15px/1.6 var(--sans);
+  display:grid;grid-template-columns:230px 1fr;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:600;margin:0;letter-spacing:-.005em}
+.mono,code,pre{font-family:var(--mono);font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+details summary{cursor:pointer}
+
+/* ===================== SOMMAIRE (barre latérale) ===================== */
+aside{border-right:1px solid var(--filet);padding:28px 0 32px;overflow:auto;height:100vh;position:sticky;top:0}
+.marque{padding:0 22px 20px;margin-bottom:6px}
+.marque svg{display:block;margin-bottom:10px}
+.marque h1{font-size:19px;line-height:1.15}
+.marque p{color:var(--encre2);margin:4px 0 0;font-size:12.5px;line-height:1.45;max-width:24ch}
+nav{display:grid}
+.groupe{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--encre3);
+  padding:18px 22px 6px;font-weight:600}
+nav button{display:block;width:100%;border:0;background:none;padding:5px 22px;cursor:pointer;
+  text-align:left;color:var(--encre2);font-size:14.5px;border-left:2px solid transparent}
+nav button:hover{color:var(--encre);background:var(--creux)}
+nav button.actif{color:var(--navy);font-weight:600;border-left-color:var(--navy);background:var(--navy-pale)}
+
+.etats{margin-top:26px;padding:16px 22px 0;border-top:1px solid var(--filet);display:grid;gap:11px}
+.etat-modele{display:grid;grid-template-columns:9px 1fr;gap:9px;align-items:start;
+  font-size:12.5px;color:var(--encre2);line-height:1.45}
+.etat-modele .voyant{width:7px;height:7px;border-radius:50%;background:var(--filet2);margin-top:6px}
+.etat-modele.ok .voyant{background:var(--oui)} .etat-modele.ko .voyant{background:var(--non)}
+.etat-modele.ko{color:var(--non)}
+.etat-modele b{color:var(--encre);font-weight:600;display:block}
+.file{font-size:12.5px;color:var(--encre2);line-height:1.5}
+.file b{color:var(--encre);font-weight:600}
+
+/* ===================== PAGE ===================== */
+main{padding:44px 48px 80px;overflow:auto;height:100vh}
+.vue{display:none;max-width:1120px} .vue.actif{display:block}
+.vue{counter-reset:figure tableau}
+
+.entete{margin-bottom:26px;padding-bottom:18px;border-bottom:2px solid var(--encre)}
+.entete h2{font-size:30px;line-height:1.1}
+.entete p{color:var(--encre2);margin:6px 0 0;font-size:15px;max-width:var(--mesure)}
+.entete{display:grid;grid-template-columns:1fr auto;gap:22px;align-items:end}
+.entete > div:first-child{min-width:0}
+
+h3.sec{font-size:20px;margin:36px 0 14px;padding-bottom:7px;border-bottom:1px solid var(--filet)}
+.chapo{font-family:var(--serif);font-size:16.5px;line-height:1.65;color:var(--encre2);
+  max-width:var(--mesure);margin:0 0 22px}
+
+/* ---- blocs ---- */
+.carte{background:var(--bloc);border:1px solid var(--filet);border-radius:var(--r)}
+.vide{color:var(--encre2);padding:34px;text-align:center;font-family:var(--serif);font-size:16px}
+.aide{color:var(--encre2);font-size:13px;margin-top:3px;line-height:1.5}
+.note{font-size:13px;color:var(--encre2);margin:9px 0 0;max-width:var(--mesure);line-height:1.55}
+code{font-size:12.5px;background:var(--creux);border:1px solid var(--filet);border-radius:2px;padding:0 4px}
+
+/* ---- commandes ---- */
+.btn{border:1px solid var(--filet2);background:var(--bloc);padding:5px 13px;border-radius:var(--r);
+  cursor:pointer;font-size:14px;line-height:1.55}
+.btn:hover{background:var(--creux);border-color:var(--encre2)}
+.btn.principal{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:600}
+@media (prefers-color-scheme:dark){.btn.principal{color:#11161d}}
+.btn.principal:hover{filter:brightness(1.12);background:var(--navy)}
+.btn.danger{color:var(--non);border-color:var(--non)}
+.btn.danger:hover{background:var(--non-pale)}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.lien{border:0;background:none;color:var(--navy);cursor:pointer;padding:0;font:inherit;text-decoration:underline}
+.segment{display:inline-flex;border:1px solid var(--filet2);border-radius:var(--r);overflow:hidden}
+.segment button{border:0;background:var(--bloc);padding:5px 14px;cursor:pointer;color:var(--encre2);font-size:14px}
+.segment button+button{border-left:1px solid var(--filet2)}
+.segment button.actif{background:var(--navy-pale);color:var(--navy);font-weight:600}
+.barre-lancer{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.barre-lancer select{width:auto;max-width:440px}
+
+input[type=text],input[type=search],input[type=number],select,textarea{width:100%;background:var(--bloc);
+  border:1px solid var(--filet2);border-radius:var(--r);padding:5px 8px;outline:none;font-size:14px}
+textarea{resize:vertical;line-height:1.55;display:block}
+input:focus,select:focus,textarea:focus{border-color:var(--navy);box-shadow:0 0 0 3px var(--navy-pale)}
+input:disabled,select:disabled{opacity:.5}
+input[type=range]{width:100%;accent-color:var(--navy);padding:0}
+.champ{display:grid;gap:3px;margin-bottom:13px}
+.champ label{font-size:13px;color:var(--encre2);display:flex;justify-content:space-between;gap:8px}
+.case{display:flex;gap:8px;align-items:center;font-size:14px;margin:7px 0;cursor:pointer}
+.case input{accent-color:var(--navy);width:15px;height:15px}
+
+.pastille{display:inline-block;padding:0 7px;border-radius:2px;font-size:12px;font-weight:600;line-height:19px}
+.pour{background:var(--pour-pale);color:var(--pour)} .contre{background:var(--contre-pale);color:var(--contre)}
+.partage{background:var(--partage-pale);color:var(--partage)}
+.oui{color:var(--oui)} .non{color:var(--non)}
+
+.bandeau{display:flex;gap:12px;align-items:center;padding:9px 13px;border-radius:var(--r);
+  margin-bottom:16px;font-size:14px;border:1px solid var(--filet);border-left-width:3px}
+.bandeau.info{background:var(--oui-pale);color:var(--oui);border-left-color:var(--oui)}
+.bandeau.alerte{background:var(--non-pale);color:var(--non);border-left-color:var(--non)}
+.bandeau.neutre{background:var(--creux);color:var(--encre2)}
+.bandeau summary{cursor:pointer}
+
+/* ===================== FIGURES ET TABLEAUX ===================== */
+.fig{margin:0 0 28px;padding:0;border-top:1px solid var(--encre);break-inside:avoid}
+.fig-tete{display:flex;gap:14px;align-items:baseline;padding:9px 0 3px}
+.fig-tete h4{font-size:16.5px;font-weight:600;line-height:1.3;flex:1;min-width:0}
+.fig[data-type=figure] h4::before{counter-increment:figure;content:"Figure " counter(figure) ". ";
+  font-variant-numeric:tabular-nums;color:var(--encre2);font-weight:600}
+.fig[data-type=tableau] h4::before{counter-increment:tableau;content:"Tableau " counter(tableau) ". ";
+  font-variant-numeric:tabular-nums;color:var(--encre2);font-weight:600}
+.fig-outils{display:flex;gap:4px;flex:none;opacity:0;transition:opacity .12s}
+.fig:hover .fig-outils,.fig:focus-within .fig-outils{opacity:1}
+.fig-outils button{border:1px solid var(--filet);background:var(--bloc);color:var(--encre2);
+  font-size:12px;padding:2px 8px;border-radius:2px;cursor:pointer;font-family:var(--sans)}
+.fig-outils button:hover{color:var(--navy);border-color:var(--navy)}
+/* L'export PNG n'a de sens que pour une figure qui contient un graphique vectoriel.
+   :has() réévalue tout seul quand le graphique est dessiné après coup. */
+.fig-outils button[data-exp=png]{display:none}
+.fig:has(svg) .fig-outils button[data-exp=png]{display:inline-block}
+.fig-corps{padding:6px 0 10px}
+.fig-corps > .carte{border:0;border-radius:0;background:none}
+.fig-note{font-size:12.5px;color:var(--encre2);margin:0 0 2px;max-width:var(--mesure);line-height:1.5}
+.fig-note b{color:var(--encre);font-weight:600}
+.fig-notes{padding-top:7px;border-top:1px solid var(--filet)}
+
+/* ===================== PROTOCOLE ===================== */
+.protocole{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;
+  background:var(--creux);border:1px solid var(--filet);border-left:3px solid var(--navy);
+  border-radius:var(--r);padding:11px 15px;margin-bottom:24px}
+.protocole p{margin:0;font-size:13.5px;color:var(--encre2);line-height:1.55}
+.protocole b{color:var(--encre);font-weight:600}
+.protocole .quoi{font-family:var(--serif);font-size:12px;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--encre3);display:block;margin-bottom:1px}
+
+.tiroir{position:fixed;right:0;top:0;height:100vh;width:430px;max-width:100vw;background:var(--bloc);
+  border-left:1px solid var(--filet2);box-shadow:-14px 0 40px rgba(20,23,28,.1);padding:26px 28px;
+  overflow:auto;transform:translateX(100%);transition:transform .2s ease;z-index:20}
+.tiroir.ouvert{transform:none}
+.tiroir h3{font-size:20px;margin-bottom:4px}
+.tiroir .fermer{position:absolute;right:16px;top:14px;border:0;background:none;font-size:22px;
+  cursor:pointer;color:var(--encre2);border-radius:var(--r);width:32px;height:32px}
+.tiroir .fermer:hover{background:var(--creux)}
+.titre-section{font-family:var(--serif);font-size:15px;font-weight:600;margin:22px 0 10px;
+  padding-bottom:5px;border-bottom:1px solid var(--filet)}
+.avance{margin-top:6px}
+.avance summary{font-size:13.5px;color:var(--encre2);margin-bottom:10px;list-style:none;display:flex;align-items:center;gap:7px}
+.avance summary::-webkit-details-marker{display:none}
+.avance summary::before{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;
+  border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform .15s}
+.avance[open] summary::before{transform:rotate(45deg)}
+pre.fiche{font-size:12.5px;line-height:1.6;white-space:pre-wrap;background:var(--creux);
+  border:1px solid var(--filet);border-radius:var(--r);padding:12px 14px;margin:14px 0}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 16px;font-size:14px}
+.kv dt{color:var(--encre2)} .kv dd{margin:0;white-space:normal}
+
+/* ===================== TABLEAUX ===================== */
+.tableau-wrap{overflow:auto;max-height:calc(100vh - 300px)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{position:sticky;top:0;z-index:1;background:var(--papier);text-align:left;font-weight:600;
+  color:var(--encre2);font-size:12.5px;padding:7px 10px;border-bottom:1px solid var(--encre);white-space:nowrap}
+td{padding:6px 10px;border-bottom:1px solid var(--filet);white-space:nowrap}
+tbody tr:last-child td{border-bottom:1px solid var(--filet2)}
+#pop-corps tr{cursor:pointer} #pop-corps tr:hover td{background:var(--creux)}
+tr.choisi td{background:var(--navy-pale)!important}
+th[data-tri]{cursor:pointer;user-select:none}
+th[data-tri]:hover{color:var(--encre)}
+th[data-tri].asc::after{content:" ▲";font-size:8px} th[data-tri].desc::after{content:" ▼";font-size:8px}
+
+/* ===================== POPULATION ===================== */
+.filtres{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.filtres input[type=text]{width:250px} .filtres select{width:auto}
+.repartition{display:flex;align-items:center;gap:16px;margin:0 0 12px;font-size:13px;color:var(--encre2);flex-wrap:wrap}
+.repartition .barre{display:flex;height:7px;overflow:hidden;flex:1;min-width:200px;max-width:500px;background:var(--filet)}
+.repartition .barre i{display:block;height:100%}
+.repartition .leg{display:flex;gap:14px}
+.repartition .leg span::before{content:"";display:inline-block;width:8px;height:8px;margin-right:6px;background:var(--c)}
+.ocean{display:flex;gap:2px;align-items:flex-end;height:17px}
+.ocean i{width:5px;background:var(--encre3);border-radius:.5px}
+.effort{display:flex;align-items:center;gap:8px}
+.effort b{display:block;height:4px;background:var(--contre)}
+.profil{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px}
+.profil div{font-size:11.5px;color:var(--encre2)}
+.profil b{display:block;height:3px;background:var(--filet);margin-top:4px;position:relative;overflow:hidden}
+.profil b i{position:absolute;inset:0 auto 0 0;background:var(--navy)}
+
+/* ===================== SCÉNARIO ===================== */
+.grille-cfg{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.bloc-cfg{padding:18px 20px 20px}
+.bloc-cfg h3{font-size:17px;margin-bottom:3px}
+.bloc-cfg .intro{color:var(--encre2);font-size:13.5px;margin:0 0 15px;line-height:1.55}
+.large{grid-column:1/-1}
+.ligne-deux{display:grid;grid-template-columns:1fr 150px;gap:12px}
+.ligne-trois{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+#cfg-elig{font-family:var(--mono);font-size:13px}
+.colonnes-dispo{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12.5px;color:var(--encre2)}
+.colonnes-dispo span{white-space:nowrap}
+.postes{font-size:13.5px;margin-top:6px} .postes td{padding:5px 2px;border-bottom:1px solid var(--filet)}
+
+/* ===================== AGENTS ===================== */
+.cartes-agents{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px;margin:18px 0}
+.agent{padding:15px 17px;position:relative;border-top:2px solid var(--filet2)}
+.agent:has(.pastille.pour){border-top-color:var(--pour)}
+.agent:has(.pastille.contre){border-top-color:var(--contre)}
+.agent:has(.pastille.partage){border-top-color:var(--partage)}
+.agent h3{font-size:18px}
+.agent .sous{color:var(--encre2);font-size:13px;margin:2px 0 9px}
+.agent .retirer{position:absolute;right:9px;top:7px;border:0;background:none;color:var(--encre3);
+  cursor:pointer;font-size:18px;width:26px;height:26px;border-radius:var(--r)}
+.agent .retirer:hover{background:var(--creux);color:var(--encre)}
+.agent .chiffres{display:flex;gap:20px;font-size:12.5px;color:var(--encre2);margin-top:12px;flex-wrap:wrap}
+.agent .chiffres b{display:block;font-size:17px;font-weight:600;color:var(--encre);font-family:var(--mono)}
+.agent .traits{font-size:13px;color:var(--encre2);margin-top:10px;white-space:normal;line-height:1.5}
+.ajout{display:flex;gap:8px;align-items:center}
+.ajout select{width:330px}
+
+/* ===================== TRANSCRIPTION ===================== */
+.dialogue{padding:0;margin-top:6px;min-height:100px;border:1px solid var(--filet);background:var(--bloc)}
+.fil{display:flex;gap:3px;align-items:center;padding:10px 20px;border-bottom:1px solid var(--filet);
+  min-height:40px;flex-wrap:wrap;background:var(--creux)}
+.fil .lbl{font-size:12.5px;color:var(--encre2);margin-right:10px}
+.fil i{width:13px;height:5px;background:var(--pour)}
+.fil i.p-contre{background:var(--contre)} .fil i.p-partage{background:var(--partage)}
+.fil i.s{background:var(--syndic);width:7px;height:7px;transform:rotate(45deg);margin:0 3px}
+.fil i.acc{box-shadow:0 0 0 2px var(--bloc),0 0 0 3.5px var(--oui)}
+.replique{display:grid;grid-template-columns:40px 165px 1fr;gap:0 14px;padding:11px 20px;
+  border-bottom:1px solid var(--filet);animation:entree .3s ease}
+.replique:last-of-type{border-bottom:0}
+@keyframes entree{from{background:var(--navy-pale)}}
+.replique .no{font-size:12px;color:var(--encre3);padding-top:4px;text-align:right;font-family:var(--mono)}
+.replique .qui{font-size:13.5px;font-weight:600;padding-top:2px}
+.replique.p-pour .qui{color:var(--pour)} .replique.p-contre .qui{color:var(--contre)}
+.replique.p-partage .qui{color:var(--partage)} .replique.s .qui{color:var(--syndic)}
+.replique .bulle{font-family:var(--serif);font-size:16px;line-height:1.6;max-width:68ch}
+.replique.s{background:var(--syndic-pale)} .replique.s .bulle{font-style:italic}
+.accord-tag{font-family:var(--sans);font-size:11.5px;font-weight:600;color:var(--oui);
+  border:1px solid var(--oui);padding:0 5px;border-radius:2px;margin-left:8px;vertical-align:2px;
+  font-style:normal;white-space:nowrap}
+.ecrit{color:var(--encre2);font-size:14px;padding:15px 20px;font-style:italic}
+
+/* ---- écoute ---- */
+.fil .ecoute{margin-left:auto;display:flex;gap:8px;align-items:center}
+.fil .ec-etat{font-size:12.5px;color:var(--encre2)}
+.fil .btn{padding:2px 10px;font-size:13px;display:inline-flex;gap:6px;align-items:center;text-decoration:none;color:var(--encre)}
+.fil .ec-mp3[hidden]{display:none}
+.fil .ec-btn.lecture{background:var(--navy-pale);border-color:var(--navy);color:var(--navy)}
+.jouer{border:0;background:none;padding:0;cursor:pointer;color:var(--encre3);font:inherit;
+  font-size:12px;width:100%;text-align:right;height:22px;font-family:var(--mono)}
+.jouer .ico{display:none}
+.dialogue:has(.ecoute) .replique:hover .jouer .n{display:none}
+.dialogue:has(.ecoute) .replique:hover .jouer .ico{display:inline}
+.dialogue:has(.ecoute) .jouer:hover{color:var(--navy)}
+.dialogue:not(:has(.ecoute)) .jouer{cursor:default}
+.replique.lecture{background:var(--navy-pale)} .replique.lecture .jouer{color:var(--navy)}
+
+/* ===================== VERDICT, JAUGES ===================== */
+.verdict{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--filet);background:var(--bloc)}
+.verdict .carte{padding:12px 16px;border:0;border-radius:0;background:none}
+.verdict .carte+.carte{border-left:1px solid var(--filet)}
+.verdict small{color:var(--encre2);font-size:12.5px;display:block}
+.verdict div b{display:block;font-size:21px;font-weight:600;margin-top:1px;font-family:var(--serif)}
+.verdict .detail{font-size:12.5px;color:var(--encre2);margin-top:1px}
+.progression{height:3px;background:var(--filet);overflow:hidden;margin:13px 0}
+.progression i{display:block;height:100%;background:var(--navy);transition:width .3s}
+.jauge{position:relative;height:7px;background:var(--creux);border:1px solid var(--filet);margin-top:8px}
+.jauge .z{position:absolute;top:-1px;bottom:-1px;background:var(--oui);opacity:.2}
+.jauge .m{position:absolute;top:-4px;width:3px;height:13px}
+
+/* ===================== GRAPHIQUES ===================== */
+.trajectoire{padding:0}
+.credibilite{padding:15px 18px;margin-top:14px}
+.trajectoire h4,.credibilite h4{font-size:15px;margin:0 0 2px;font-weight:600}
+.trajectoire svg,.nuage svg{width:100%;height:auto;display:block;overflow:visible}
+.nuage svg{max-width:720px}
+.trajectoire .ax,.nuage .ax{font-size:11px;fill:var(--encre2);font-family:var(--sans);
+  paint-order:stroke;stroke:var(--papier);stroke-width:3px;stroke-linejoin:round}
+.legende{display:grid;gap:4px;margin-top:10px;font-size:13px}
+.leg-agent{display:flex;gap:8px;align-items:baseline}
+.leg-agent i{width:9px;height:9px;flex:none;transform:translateY(1px)}
+.leg-agent span{color:var(--encre2)}
+
+/* ===================== CRÉDIBILITÉ ===================== */
+.cred-tete{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.notes{display:flex;gap:24px;flex-wrap:wrap;margin:8px 0}
+.notes small{display:block;color:var(--encre2);font-size:12.5px}
+.notes .note{font-size:20px;font-weight:600;font-family:var(--serif);margin:0}
+.notes .sur{color:var(--encre3);font-size:13px;margin-left:1px}
+.note.n1,.note.n2{color:var(--non)} .note.n4,.note.n5{color:var(--oui)}
+.commentaire{font-family:var(--serif);font-size:15.5px;margin:8px 0;max-width:var(--mesure);line-height:1.6}
+
+/* ===================== SCÈNES JOUÉES ===================== */
+.deux{display:grid;grid-template-columns:310px 1fr;gap:22px;align-items:start}
+.liste-cadre{overflow:hidden}
+.liste-recherche{padding:9px;border-bottom:1px solid var(--filet);background:var(--creux)}
+.liste{max-height:calc(100vh - 250px);overflow:auto}
+.liste button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--filet);
+  background:none;padding:10px 14px;cursor:pointer;border-left:2px solid transparent}
+.liste button:hover{background:var(--creux)}
+.liste button.actif{background:var(--navy-pale);border-left-color:var(--navy)}
+.liste .l1{font-weight:600;font-size:13.5px} .liste .l2{font-size:12px;color:var(--encre2);margin-top:1px}
+.point{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;
+  background:var(--filet2);vertical-align:1px}
+.point.oui{background:var(--oui)} .point.non{background:var(--non)}
+
+/* ===================== STATISTIQUES ===================== */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--filet);background:var(--bloc)}
+.kpi{padding:13px 17px;border:0;border-radius:0;border-right:1px solid var(--filet);
+  border-bottom:1px solid var(--filet);margin:0 -1px -1px 0}
+.kpi small{color:var(--encre2);font-size:12.5px;display:block}
+.kpi b{font-size:27px;font-weight:600;display:block;line-height:1.2;margin-top:1px;font-family:var(--serif)}
+.kpi span{font-size:12px;color:var(--encre2);display:block;margin-top:1px}
+.puces{display:flex;flex-wrap:wrap;gap:5px}
+.puce{border:1px solid var(--filet2);background:var(--bloc);border-radius:var(--r);padding:1px 10px;
+  font-size:13px;cursor:pointer;color:var(--encre2)}
+.puce:hover{color:var(--encre)}
+.puce.actif{border-color:var(--navy);background:var(--navy-pale);color:var(--navy);font-weight:600}
+.bloc-filtres{display:grid;grid-template-columns:auto 1fr;gap:9px 16px;align-items:center;
+  margin-bottom:22px;font-size:13.5px}
+.bloc-filtres > span{color:var(--encre2)}
+.ic{display:flex;align-items:center;gap:8px}
+.ic .piste{position:relative;width:62px;height:5px;background:var(--creux);border:1px solid var(--filet);flex:none}
+.ic .piste i{position:absolute;top:-1px;bottom:-1px;left:0;background:var(--navy);opacity:.8}
+.ic .piste u{position:absolute;top:1.5px;height:1.5px;background:var(--encre);opacity:.6}
+.ic .piste u::before,.ic .piste u::after{content:"";position:absolute;top:-3px;width:1.5px;height:7.5px;background:var(--encre)}
+.ic .piste u::before{left:0} .ic .piste u::after{right:0}
+.ic small{color:var(--encre2);font-size:11.5px}
+
+/* ===================== ANALYSES ===================== */
+.an-bloc{padding:0}
+.conc{display:grid;grid-template-columns:120px 1fr 1fr;gap:9px 18px;align-items:center;font-size:13.5px}
+.conc .t{color:var(--encre2);font-size:12.5px}
+.conc .ligne-barre{display:grid;grid-template-columns:1fr 44px 44px;gap:8px;align-items:center}
+.conc .ligne-barre span{font-weight:600;text-align:right;font-family:var(--mono)}
+.conc .ligne-barre small{color:var(--encre2);font-size:12px;font-family:var(--mono)}
+.conc .barre{position:relative;height:16px;background:var(--creux);border:1px solid var(--filet)}
+.conc .barre i{position:absolute;top:2px;bottom:2px;left:0}
+.conc .barre u{position:absolute;top:7px;height:1.5px;background:var(--encre);opacity:.5}
+.matrice{border-collapse:separate;border-spacing:4px;width:auto}
+.matrice th{position:static;background:none;border:0;font-size:12.5px;padding:3px 8px;color:var(--encre2)}
+.matrice td{border:0;padding:0}
+.matrice button{width:168px;border:1px solid var(--filet);padding:8px 10px;cursor:pointer;
+  text-align:left;background:var(--c,var(--bloc));color:var(--encre);font:inherit;border-radius:2px}
+.matrice button.actif{outline:2px solid var(--navy);outline-offset:1px}
+.matrice .r{font-size:17px;font-weight:600;display:block;font-family:var(--mono)}
+.matrice small{color:var(--encre2);font-size:11px;display:block;font-family:var(--mono)}
+.matrice .sig{color:var(--navy);font-size:11.5px;font-weight:600}
+
+/* ===================== EXPÉRIENCES ===================== */
+.variantes td{padding:5px;vertical-align:middle;border-bottom:1px solid var(--filet)}
+.variantes input,.variantes select{padding:3px 6px}
+.variantes input[type=number]{width:62px} .variantes .nom{width:128px} .variantes select{width:auto;min-width:94px}
+.signif{font-weight:600}
+.form-exp{display:grid;grid-template-columns:1.3fr 1.6fr .8fr .8fr .7fr;gap:14px;margin-bottom:10px}
+.form-exp .champ{margin:0}
+
+/* ===================== NOTIFICATIONS ===================== */
+.toasts{position:fixed;right:22px;bottom:22px;display:grid;gap:8px;z-index:30}
+.toast{background:var(--encre);color:var(--papier);padding:9px 14px;border-radius:var(--r);
+  font-size:14px;box-shadow:0 8px 26px rgba(20,23,28,.2);max-width:380px;animation:toast .2s ease}
+.toast.ko{background:var(--non);color:#fff}
+@keyframes toast{from{opacity:0;transform:translateY(6px)}}
+dialog#confirmer{border:1px solid var(--filet2);border-radius:var(--r);padding:22px 24px;max-width:420px;
+  background:var(--bloc);color:var(--encre);box-shadow:0 18px 48px rgba(20,23,28,.22)}
+dialog#confirmer::backdrop{background:rgba(20,23,28,.35)}
+dialog#confirmer h3{font-size:18px} dialog#confirmer p{color:var(--encre2);font-size:14px;margin:8px 0 18px}
+.cf-actions{display:flex;justify-content:flex-end;gap:8px}
+
+/* ===================== IMPRESSION ===================== */
+@media print{
+  body{display:block;background:#fff;color:#000;font-size:11pt}
+  aside,.toasts,.protocole .btn,.fig-outils,.segment,.filtres,.barre-lancer,#stop,.liste-cadre{display:none!important}
+  main{height:auto;overflow:visible;padding:0}
+  .vue{display:none} .vue.actif{display:block;max-width:none}
+  .fig{break-inside:avoid;page-break-inside:avoid}
+  .carte,.dialogue,table{border-color:#999}
+  .tableau-wrap{max-height:none;overflow:visible}
+  .deux{grid-template-columns:1fr}
+}
+
+@media (max-width:1040px){
+  body{grid-template-columns:1fr} aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--filet)}
+  main{height:auto;padding:26px 18px}
+  .grille-cfg,.deux,.form-exp{grid-template-columns:1fr}
+  .verdict,.kpis{grid-template-columns:1fr 1fr}
+  .replique{grid-template-columns:30px 1fr} .replique .bulle{grid-column:2}
+  .entete{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="marque">
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><g fill="var(--filet2)"><circle cx="6" cy="6" r="1.7"/><circle cx="17" cy="6" r="1.7"/><circle cx="28" cy="6" r="1.7"/><circle cx="6" cy="17" r="1.7"/><circle cx="28" cy="17" r="1.7"/><circle cx="6" cy="28" r="1.7"/><circle cx="17" cy="28" r="1.7"/><circle cx="28" cy="28" r="1.7"/></g><path d="M9.5 20.5 17 13l7.5 7.5" fill="none" stroke="var(--navy)" stroke-width="1.6"/><circle cx="9.5" cy="20.5" r="3" fill="var(--pour)"/><circle cx="24.5" cy="20.5" r="3" fill="var(--contre)"/><circle cx="17" cy="13" r="2.4" fill="var(--navy)"/></svg>
+    <h1>Labo des agents</h1>
+    <p>Négociation entre agents issus de la population synthétique</p>
+  </div>
+  <nav>
+    <div class="groupe">Le dispositif</div>
+    <button data-vue="population" class="actif">Population</button>
+    <button data-vue="scenario">Scénario</button>
+    <div class="groupe">Les expériences</div>
+    <button data-vue="lancer">Lancer</button>
+    <button data-vue="experiences">Expériences</button>
+    <button data-vue="scenes">Scènes jouées</button>
+    <div class="groupe">Les résultats</div>
+    <button data-vue="stats">Statistiques</button>
+    <button data-vue="analyses">Analyses</button>
+  </nav>
+  <div class="etats">
+    <div class="etat-modele" data-etat="modele" role="status"><span class="voyant"></span><span class="txt"><b>Modèle</b><span class="msg">Vérification…</span></span></div>
+    <div class="etat-modele" data-etat="voix" role="status"><span class="voyant"></span><span class="txt"><b>Voix</b><span class="msg">Vérification…</span></span></div>
+    <div class="file" id="file"><b>File d'attente</b>Aucun travail en cours.</div>
+  </div>
+</aside>
+
+<div class="tiroir" id="proto">
+  <button class="fermer" onclick="fermerProtocole()" aria-label="Fermer">×</button>
+  <h3>Protocole</h3>
+  <p class="aide">Les réglages de la scène et du modèle. Ils s'appliquent à la prochaine scène, série ou expérience lancée.</p>
+  <div class="titre-section">Scène</div>
+  <div class="champ"><label for="mode">Mode</label>
+    <select id="mode"><option value="negociation">Négociation</option><option value="debat">Débat</option></select></div>
+  <div class="champ"><label for="taille">Agents par scène</label>
+    <select id="taille"><option value="2">Deux agents</option><option value="3">Trois agents (négociation)</option></select></div>
+  <label class="case"><input id="mediateur" type="checkbox" checked>Médiateur (syndic)</label>
+  <label class="case"><input id="juger" type="checkbox">Faire évaluer par le juge</label>
+  <div class="champ" style="margin-top:8px"><label for="tours">Répliques max <span id="v-tours" class="mono"></span></label><input id="tours" type="range" min="4" max="30" step="2" value="16"></div>
+
+  <div class="titre-section">Modèle</div>
+  <div class="champ"><label for="backend">Backend</label>
+    <select id="backend"><option>test</option><option>ollama</option><option>openai</option><option>anthropic</option></select></div>
+  <div class="champ"><label for="modele">Modèle</label><input id="modele" type="text"></div>
+  <div class="etat-modele" data-etat="modele" role="status"><span class="voyant"></span><span class="txt"><span class="msg">Vérification…</span></span></div>
+  <div class="champ"><label for="temperature">Température <span id="v-temp" class="mono"></span></label><input id="temperature" type="range" min="0" max="1.5" step="0.1" value="0.9"></div>
+  <div class="champ"><label for="etiquette">Étiquette de l'essai</label><input id="etiquette" type="text" placeholder="ex. prompt v2"></div>
+  <details class="avance" id="avance">
+    <summary>Réglages avancés</summary>
+    <div class="champ"><label for="base_url">URL de l'API <span>optionnel</span></label><input id="base_url" type="text" placeholder="vide pour Ollama en local"></div>
+    <div class="champ"><label for="max_tokens">Longueur max. d'une réplique <span>tokens</span></label><input id="max_tokens" type="number" value="400" step="100"></div>
+    <label class="case"><input id="sans_reflexion" type="checkbox" checked>Sans réflexion (Qwen)</label>
+    <div class="champ" style="margin-top:10px"><label for="modele_juge">Modèle du juge <span>vide : le même</span></label><input id="modele_juge" type="text" placeholder="ex. un modèle plus gros"></div>
+  </details>
+
+  <div class="titre-section">Voix</div>
+  <div class="etat-modele" data-etat="voix" role="status"><span class="voyant"></span><span class="txt"><span class="msg">Vérification…</span></span></div>
+  <label class="case"><input id="voix_auto" type="checkbox">Lire chaque nouvelle scène</label>
+  <div class="aide" style="margin:2px 6px 0">La clé est lue dans <code>agent/cle_elevenlabs.txt</code> (exclu de Git), jamais saisie ici.</div>
+
+</div>
+
+<main>
+  <!-- ======================= POPULATION ======================= -->
+  <section class="vue actif" id="v-population">
+    <div class="entete">
+      <div><h2>Population</h2><p id="pop-resume"></p></div>
+      <div class="segment" id="pop-seg"><button data-v="elig" class="actif">Éligibles</button><button data-v="tous">Tous</button></div>
+    </div>
+    <p class="chapo">Les 500 individus reconstruits à partir des 729 cellules marginales, chacun doté d'un profil de personnalité et d'un enjeu financier dans la copropriété. C'est le réservoir dans lequel les scènes puisent leurs agents.</p>
+    <div class="filtres">
+      <input id="f-texte" type="text" placeholder="Rechercher un nom, un métier…">
+      <select id="f-revenu"><option value="">Revenu : tous</option><option value="modeste">modeste</option><option value="moyen">moyen</option><option value="aise">aisé</option></select>
+      <select id="f-age"><option value="">Âge : tous</option><option>18-29</option><option>30-59</option><option>60+</option></select>
+      <select id="f-pos"><option value="">Position : toutes</option><option>pour</option><option>contre</option><option value="partage">partagé</option></select>
+    </div>
+    <div class="repartition" id="pop-rep"></div>
+    <figure class="fig" data-type="tableau">
+      <figcaption class="fig-tete"><h4 id="pop-titre">Les agents de la population</h4>
+        <span class="fig-outils"><button data-exp="latex">LaTeX</button><button data-exp="csv">CSV</button></span></figcaption>
+      <div class="fig-corps tableau-wrap"><table>
+      <thead id="pop-tete"><tr><th data-tri="id">#</th><th data-tri="nom">Nom</th><th data-tri="age_annees">Âge</th><th data-tri="situation">Situation</th><th data-tri="revenu_mensuel">Revenu</th><th data-tri="logement">Logement</th><th data-tri="position">Position</th><th data-tri="effort_pct">Effort</th><th title="Ouverture, Conscienciosité, Extraversion, Agréabilité, Névrosisme">Profil</th></tr></thead>
+      <tbody id="pop-corps"></tbody>
+    </table></div>
+      <div class="fig-notes"><p class="fig-note" id="pop-note"></p>
+        <p class="fig-note"><b>Source :</b> population synthétique de 500 individus reconstruite à partir des 729 cellules marginales, enrichie d'un profil de personnalité tiré au sort.</p></div>
+    </figure>
+  </section>
+
+  <!-- ======================= SCÉNARIO ======================= -->
+  <section class="vue" id="v-scenario">
+    <div class="entete">
+      <div><h2>Scénario</h2><p id="cfg-resume">Chargement…</p></div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="pastille partage" id="cfg-modif" style="display:none">modifié</span>
+        <button class="btn" id="cfg-reset">Rétablir les valeurs du code</button>
+      </div>
+    </div>
+    <p class="chapo">Le cadre commun à toutes les scènes : la situation présentée aux agents, le budget des travaux, les marges secrètes de négociation et les objectifs de départ. Modifier ces valeurs ne touche pas au code : elles accompagnent chaque scène dans le journal.</p>
+    <div id="cfg-erreur"></div>
+
+    <div class="grille-cfg">
+      <div class="carte bloc-cfg">
+        <h3>Situation</h3>
+        <p class="intro">Le contexte donné aux agents. Les champs sont préremplis avec les valeurs de <code>scene.py</code>.</p>
+        <div class="champ"><label for="cfg-s-titre">Titre</label><input id="cfg-s-titre" type="text"></div>
+        <div class="champ"><label for="cfg-s-lieu">Lieu</label><textarea id="cfg-s-lieu" rows="3"></textarea></div>
+        <div class="champ"><label for="cfg-s-projet">Projet proposé <span>mode débat</span></label><textarea id="cfg-s-projet" rows="3"></textarea>
+          <div class="aide">Inséré après « Le syndic propose de ». En négociation, le projet est présenté poste par poste (ci-contre).</div></div>
+        <div class="ligne-deux">
+          <div class="champ"><label for="cfg-s-urgent">Travaux urgents</label><input id="cfg-s-urgent" type="text"></div>
+          <div class="champ"><label for="cfg-s-budget_annuel">Budget annuel (€)</label><input id="cfg-s-budget_annuel" type="number" min="1" step="1000"></div>
+        </div>
+        <div class="aide">Le budget sert au calcul de la part de chaque agent (quote-part × budget).</div>
+      </div>
+
+      <div class="carte bloc-cfg">
+        <h3>Marges de négociation</h3>
+        <p class="intro">Le plafond de hausse mensuelle que chaque agent peut accepter, en % de son revenu, selon sa position. C'est ce qui détermine la <b>zone d'accord</b> : plus les marges sont serrées, plus il y a de paires sans accord possible.</p>
+        <div class="ligne-trois">
+          <div class="champ"><label for="cfg-m-contre"><span class="pastille contre">contre</span><span>%</span></label><input id="cfg-m-contre" type="number" step="0.5" min="0.5"></div>
+          <div class="champ"><label for="cfg-m-partage"><span class="pastille partage">partagé</span><span>%</span></label><input id="cfg-m-partage" type="number" step="0.5" min="0.5"></div>
+          <div class="champ"><label for="cfg-m-pour"><span class="pastille pour">pour</span><span>%</span></label><input id="cfg-m-pour" type="number" step="0.5" min="0.5"></div>
+        </div>
+        <div class="aide">Postes négociables (coûts calés sur le budget annuel), payables sur 1, 2 ou 3 ans :</div>
+        <table class="postes"><tbody id="cfg-postes"></tbody></table>
+      </div>
+
+      <div class="carte bloc-cfg">
+        <h3>Objectifs des agents</h3>
+        <p class="intro">La position de départ, selon la position de l'agent : <b>contre</b> si revenu modeste ou effort ≥ 6 %, <b>pour</b> si revenu aisé ou effort ≤ 3 %, sinon <b>partagé</b>.</p>
+        <div class="champ"><label for="cfg-o-contre"><span class="pastille contre">contre</span></label><textarea id="cfg-o-contre" rows="3"></textarea></div>
+        <div class="champ"><label for="cfg-o-pour"><span class="pastille pour">pour</span></label><textarea id="cfg-o-pour" rows="3"></textarea></div>
+        <div class="champ"><label for="cfg-o-partage"><span class="pastille partage">partagé</span></label><textarea id="cfg-o-partage" rows="3"></textarea></div>
+        <div class="champ"><label for="cfg-o-sante"><span>Nuance santé <span style="opacity:.8">(si l'ascenseur compte pour l'agent)</span></span></label><textarea id="cfg-o-sante" rows="2"></textarea>
+          <div class="aide">À vider pour supprimer cette nuance.</div></div>
+        <div class="aide">Variables : <code>{urgent}</code> <code>{projet}</code> <code>{budget_annuel}</code> <code>{titre}</code> <code>{lieu}</code></div>
+      </div>
+
+      <div class="carte bloc-cfg">
+        <h3>Critère d'éligibilité</h3>
+        <p class="intro">Qui peut être tiré ou choisi pour une scène (syntaxe <code>pandas query</code> : <code>==</code>, <code>!=</code>, <code>&gt;=</code>, <code>and</code>, <code>or</code>, <code>not</code>, <code>in [...]</code>). Vide : tout le monde.</p>
+        <div class="champ"><input id="cfg-elig" type="text" spellcheck="false" autocomplete="off"></div>
+        <div class="aide">Exemple : <code>logement == "proprietaire" and zone == "ville" and age_annees &gt;= 30</code></div>
+        <div class="colonnes-dispo" id="colonnes-dispo"></div>
+      </div>
+    </div>  </section>
+
+  <!-- ======================= LANCER ======================= -->
+  <section class="vue" id="v-lancer">
+    <div class="entete">
+      <div><h2>Lancer</h2><p id="titre-scenario"></p></div>
+      <div class="segment" id="mode-seg"><button data-v="une" class="actif">Une scène</button><button data-v="serie">Série</button></div>
+    </div>
+    <p class="chapo">Une scène met face à face deux ou trois agents qui doivent s'entendre sur une proposition de travaux. Chacun ignore la marge de l'autre. Le dialogue s'affiche au fur et à mesure, puis le résultat est confronté aux marges.</p>
+
+    <div class="protocole"><p><span class="quoi">Protocole</span><span class="proto-texte">…</span></p>
+      <button class="btn" onclick="ouvrirProtocole()">Modifier</button></div>
+    <div class="barre-lancer">
+      <div class="ajout">
+        <select id="ajout-select"></select>
+        <button class="btn" id="ajout-btn">Ajouter</button>
+      </div>
+      <span style="color:var(--encre2)">ou</span>
+      <button class="btn" id="auto-btn">Groupe automatique</button>
+      <span style="color:var(--encre2);font-size:12.5px">graine</span>
+      <input id="graine" type="number" value="0" style="width:80px">
+    </div>
+    <div class="cartes-agents" id="cartes"></div>
+    <div id="zone-bandeau"></div>
+
+    <div class="barre-lancer" id="barre-serie" style="display:none;margin-bottom:12px">
+      <span>Nombre de scènes</span><input id="nb" type="number" value="10" min="1" style="width:90px">
+      <span>Agents</span>
+      <select id="mode-agents"></select>
+      <div style="flex-basis:100%;color:var(--encre2);font-size:12.5px" id="serie-aide"></div>
+    </div>
+    <div class="barre-lancer">
+      <button class="btn principal" id="go">▶ Jouer la scène</button>
+      <button class="btn danger" id="stop" style="display:none">■ Arrêter</button>
+    </div>
+    <div id="sortie"></div>
+  </section>
+
+  <!-- ======================= EXPÉRIENCES ======================= -->
+  <section class="vue" id="v-experiences">
+    <div class="entete">
+      <div><h2>Expériences</h2><p>Comparer des réglages à agents constants</p></div>
+    </div>
+    <p class="chapo">Une expérience fait jouer les mêmes groupes d'agents par plusieurs variantes de réglages. Comme les agents ne changent pas, l'écart observé vient des réglages, et la comparaison appariée dit s'il est réel ou dû au hasard.</p>    <div class="protocole"><p><span class="quoi">Protocole</span><span class="proto-texte">…</span></p>
+      <button class="btn" onclick="ouvrirProtocole()">Modifier</button></div>
+    <div class="carte" style="padding:20px 22px">
+      <p class="note" style="margin:0 0 14px">Chaque variante joue tous les groupes tirés, autant de fois que demandé, dans un ordre aléatoire. La première variante sert de <b>référence</b> : les autres lui sont comparées.</p>
+      <div class="form-exp">
+        <div class="champ"><label for="ex-nom">Nom de l'expérience</label><input id="ex-nom" type="text" placeholder="ex. effet du médiateur"></div>
+        <div class="champ"><label for="ex-tirage">Paires d'agents</label><select id="ex-tirage"></select></div>
+        <div class="champ"><label for="ex-n">Nombre de paires</label><input id="ex-n" type="number" value="10" min="1" max="200"></div>
+        <div class="champ"><label for="ex-rep">Répétitions</label><input id="ex-rep" type="number" value="1" min="1" max="10"></div>
+        <div class="champ"><label for="ex-graine">Graine</label><input id="ex-graine" type="number" value="0"></div>
+      </div>
+      <div style="overflow:auto"><table class="variantes"><thead><tr><th>Variante</th><th>Mode</th><th>Agents</th><th>Backend</th><th>Modèle</th><th>T°</th><th>Répliques</th><th>Syndic</th><th>Marge contre %</th><th>partagé %</th><th>pour %</th><th></th></tr></thead>
+        <tbody id="ex-variantes"></tbody></table></div>
+      <div class="barre-lancer" style="margin-top:12px">
+        <button class="btn" id="ex-ajout">+ Variante</button>
+        <span class="aide" id="ex-total" style="margin:0"></span>
+        <span style="flex:1"></span>
+        <button class="btn danger" id="ex-stop" style="display:none">■ Arrêter</button>
+        <button class="btn principal" id="ex-go">▶ Lancer l'expérience</button>
+      </div>
+      <div id="ex-progression"></div>
+    </div>
+
+    <h3 class="sec">Résultats</h3>
+    <p class="chapo" style="font-size:15px">Chaque bloc ci-dessous s'exporte pour le rapport : <b>LaTeX</b> copie le tableau en <code>tabular</code>, <b>PNG</b> enregistre la figure.</p>
+    <div class="barre-lancer" style="margin-bottom:12px"><select id="ex-liste"></select><button class="btn" id="ex-csv">Exporter CSV</button></div>
+    <div id="ex-resultats"></div>
+  </section>
+
+  <!-- ======================= SCÈNES ======================= -->
+  <section class="vue" id="v-scenes">
+    <div class="entete"><div><h2>Scènes jouées</h2><p id="sc-resume"></p></div></div>
+    <p class="chapo">Le journal complet, scène par scène : la transcription, le résultat, les consignes exactes reçues par chaque agent et la configuration en vigueur. De quoi rejouer ou vérifier n'importe quelle scène.</p>
+    <div class="deux">
+      <div class="carte liste-cadre"><div class="liste-recherche"><input id="sc-cherche" type="search" placeholder="Filtrer par agent, modèle, variante…"></div><div class="liste" id="sc-liste"></div></div>
+      <div id="sc-detail"></div>
+    </div>
+  </section>
+
+  <!-- ======================= STATS ======================= -->
+  <section class="vue" id="v-stats">
+    <div class="entete">
+      <div><h2>Statistiques</h2><p id="st-resume"></p></div>
+      <div style="display:flex;gap:8px"><button class="btn" id="csv">Exporter CSV</button><button class="btn" id="vider">Vider le journal</button></div>
+    </div>
+    <p class="chapo">L'ensemble du journal agrégé, avec un intervalle de confiance sur chaque proportion. À utiliser pour explorer ; pour conclure, préférez une expérience, qui compare à agents constants.</p>
+    <div id="st-contenu"></div>
+  </section>
+  <!-- ======================= ANALYSES ======================= -->
+  <section class="vue" id="v-analyses">
+    <div class="entete">
+      <div><h2>Analyses</h2><p id="an-resume"></p></div>
+    </div>
+    <p class="chapo">Ce que la position et la personnalité des agents changent au déroulement de la négociation : qui cède, et à quelles conditions.</p>    <div id="an-contenu"></div>
+  </section>
+</main>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<dialog id="confirmer"><h3 id="cf-titre"></h3><p id="cf-texte"></p><div class="cf-actions"><button class="btn" value="non" id="cf-non">Annuler</button><button class="btn danger" id="cf-oui">Confirmer</button></div></dialog>
+<div class="tiroir" id="tiroir"><button class="fermer" onclick="fermerTiroir()">×</button><div id="tiroir-corps"></div></div>
+
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+/* Les voyants « Modèle » et « Voix » existent en deux endroits : le sommaire et le tiroir. */
+function voyants(liste, ok, message){
+  liste.forEach(e => {
+    e.className = "etat-modele" + (ok === true ? " ok" : ok === false ? " ko" : "");
+    e.querySelector(".msg").textContent = message;
+  });
+}
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pct = x => x == null ? "—" : Math.round(100 * x) + " %";
+const ouinon = x => x === true ? '<span class="oui">oui</span>' : x === false ? '<span class="non">non</span>' : "—";
+const POS = {pour:"pour", contre:"contre", partage:"partagé"};
+const MODES = {negociation:"négociation", debat:"débat", ancien:"ancien"};
+const TIRAGES = {
+  memes: ["Toujours les agents choisis ci-dessus", "Les agents choisis rejouent la scène à chaque fois : on mesure la variabilité du modèle."],
+  opposes_zone: ["Groupe aléatoire « pour / contre » avec zone d'accord", "Un agent « pour » (qui commence), un « contre » et, à trois, un troisième (de préférence « partagé »), tirés parmi les groupes où un accord est possible : la condition pour tester la convergence."],
+  opposes: ["Groupe aléatoire « pour / contre »", "Un « pour », un « contre » (et un troisième agent) au hasard, que la zone d'accord existe ou non : les groupes sans zone servent de contrôle (l'accord doit y rester à 0 %)."],
+  aleatoire: ["Groupe aléatoire parmi tous les éligibles", "Des éligibles au hasard, quelle que soit leur position."],
+  optimisees: ["Groupe automatique optimisé (plus grand écart)", "La paire automatique (grand écart d'effort, faible agréabilité) pour la graine, la graine + 1…, plus un troisième agent à trois."]};
+async function api(url, corps){
+  const r = await fetch(url, corps ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(corps)} : {});
+  const j = await r.json(); if (!r.ok) throw new Error(j.erreur || r.status); return j;
+}
+const memo = { lire(k,d){ try{ return JSON.parse(localStorage.getItem("labo."+k)) ?? d }catch{ return d } },
+               ecrire(k,v){ try{ localStorage.setItem("labo."+k, JSON.stringify(v)) }catch{} } };
+const retarder = (f, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => f(...a), ms) } };
+const pause = ms => new Promise(r => setTimeout(r, ms));
+function toast(msg, ko = false){
+  const t = document.createElement("div"); t.className = "toast" + (ko ? " ko" : ""); t.textContent = msg;
+  $("#toasts").append(t); setTimeout(() => t.remove(), ko ? 7000 : 4000);
+}
+function confirmer(titre, texte, action = "Confirmer"){
+  const d = $("#confirmer");
+  $("#cf-titre").textContent = titre; $("#cf-texte").textContent = texte; $("#cf-oui").textContent = action;
+  d.showModal();
+  return new Promise(ok => {
+    $("#cf-oui").onclick = () => { d.close(); ok(true) };
+    $("#cf-non").onclick = () => { d.close(); ok(false) };
+    d.oncancel = () => ok(false);
+  });
+}
+
+/* Proportion avec intervalle de confiance : barre + [bas–haut] + effectif */
+function ic(m, cible){
+  if (!m) return '<span style="color:var(--encre2)">—</span>';
+  return `<div class="ic"><span class="piste"><i style="width:${100*m.p}%"></i><u style="left:${100*m.bas}%;width:${100*(m.haut-m.bas)}%"></u></span>
+    <span><span class="mono">${pct(m.p)}</span><small class="mono" style="display:block;line-height:1.2">[${Math.round(100*m.bas)}–${Math.round(100*m.haut)}] ${m.k}/${m.n}</small></span></div>`;
+}
+const moy = (m, f = x => x.toFixed(2), u = "") => m ? `<span class="mono">${f(m.moy)}${u}</span> <small style="color:var(--encre2)" class="mono">± ${f(m.et)} · n=${m.n}</small>` : "—";
+
+/* ---------- figures et tableaux numérotés ---------- */
+/* Chaque résultat est présenté comme dans une publication : un numéro, un titre,
+   puis les notes de lecture. Les boutons exportent la figure (PNG) ou le tableau
+   (LaTeX, CSV) pour le rapport. */
+function fig(type, titre, corps, ...notes){
+  const n = notes.filter(Boolean);
+  const outils = type === "figure"
+    ? '<button data-exp="png">PNG</button>'
+    : '<button data-exp="latex">LaTeX</button><button data-exp="csv">CSV</button>';
+  return `<figure class="fig" data-type="${type}">
+    <figcaption class="fig-tete"><h4>${titre}</h4><span class="fig-outils">${outils}</span></figcaption>
+    <div class="fig-corps">${corps}</div>
+    ${n.length ? `<div class="fig-notes">${n.map(x => `<p class="fig-note">${x}</p>`).join("")}</div>` : ""}
+  </figure>`;
+}
+const lecture = t => `<b>Lecture :</b> ${t}`;
+const champ = t => `<b>Champ :</b> ${t}`;
+
+/* Le SVG d'une figure utilise des variables CSS : on les résout avant d'exporter. */
+function svgAutonome(svg){
+  const copie = svg.cloneNode(true), src = [svg, ...svg.querySelectorAll("*")], dst = [copie, ...copie.querySelectorAll("*")];
+  src.forEach((e, i) => {
+    const c = getComputedStyle(e);
+    ["fill", "stroke", "stroke-width", "stroke-dasharray", "stroke-linejoin", "paint-order",
+     "opacity", "font-size", "font-family", "font-weight", "font-style", "text-anchor"].forEach(p => {
+      const v = c.getPropertyValue(p);
+      if (v && v !== "none" || p === "fill") dst[i].setAttribute(p, v);
+    });
+  });
+  // Cadrer sur ce qui est réellement dessiné, légendes d'axes comprises.
+  const b = svg.getBBox(), marge = 12;
+  const x = b.x - marge, y = b.y - marge, l = b.width + 2 * marge, h = b.height + 2 * marge;
+  copie.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  copie.setAttribute("viewBox", `${x} ${y} ${l} ${h}`);
+  copie.setAttribute("width", l); copie.setAttribute("height", h);
+  const fond = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  fond.setAttribute("x", x); fond.setAttribute("y", y);
+  fond.setAttribute("width", l); fond.setAttribute("height", h);
+  fond.setAttribute("fill", getComputedStyle(document.body).backgroundColor);
+  copie.insertBefore(fond, copie.firstChild);
+  return {texte: new XMLSerializer().serializeToString(copie), l, h};
+}
+function exporterPNG(figure){
+  const svg = figure.querySelector("svg");
+  if (!svg) return toast("Cette figure n'a pas d'image à exporter.", true);
+  const {texte, l, h} = svgAutonome(svg), e = 2;                 // ×2 : lisible une fois imprimé
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement("canvas");
+    c.width = Math.round(l * e); c.height = Math.round(h * e);
+    const ctx = c.getContext("2d"); ctx.scale(e, e);
+    ctx.drawImage(img, 0, 0, l, h);
+    c.toBlob(b => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(b);
+      a.download = nomFichier(figure) + ".png"; a.click();
+      toast("Image enregistrée.");
+    });
+  };
+  img.onerror = ev => toast("L'image n'a pas pu être produite : le navigateur a refusé le rendu du graphique.", true);
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(texte);
+}
+function numero(figure){
+  const type = figure.dataset.type;
+  const vue = figure.closest(".vue") || document;
+  return [...vue.querySelectorAll(`.fig[data-type="${type}"]`)].indexOf(figure) + 1;
+}
+const legendeFig = figure => `${figure.dataset.type === "figure" ? "Figure" : "Tableau"} ${numero(figure)}`;
+function nomFichier(figure){
+  return (legendeFig(figure) + "_" + figure.querySelector("h4").textContent)
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "").toLowerCase().slice(0, 60) || "export";
+}
+/* Une cellule peut porter data-tex : c'est alors ce texte court qui part dans l'export. */
+function cellules(figure){
+  const t = figure.querySelector("table");
+  if (!t) return null;
+  return [...t.rows].map(r => [...r.cells].map(c => {
+    const court = c.querySelector("[data-tex]");
+    return (court ? court.dataset.tex : c.innerText).replace(/\s+/g, " ").trim();
+  }));
+}
+function versLatex(figure){
+  const l = cellules(figure); if (!l) return null;
+  const n = l[0].length;
+  const ech = x => x.replace(/([&%$#_])/g, "\\$1").replace(/—/g, "--").replace(/·/g, ";");
+  return ["\\begin{table}[htbp]", "  \\centering",
+    "  \\caption{" + ech(figure.querySelector("h4").textContent.trim()) + "}",
+    "  \\label{tab:" + nomFichier(figure) + "}",
+    "  \\begin{tabular}{l" + "r".repeat(n - 1) + "}", "    \\hline",
+    "    " + l[0].map(ech).join(" & ") + " \\\\", "    \\hline",
+    ...l.slice(1).map(r => "    " + r.map(ech).join(" & ") + " \\\\"),
+    "    \\hline", "  \\end{tabular}", "\\end{table}"].join("\n");
+}
+function versCsv(figure){
+  const l = cellules(figure); if (!l) return null;
+  return l.map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
+}
+async function copier(texte, quoi){
+  try { await navigator.clipboard.writeText(texte); toast(quoi + " copié dans le presse-papiers.") }
+  catch { toast("Copie impossible : votre navigateur la refuse hors HTTPS.", true) }
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest(".fig-outils button"); if (!b) return;
+  const figure = b.closest(".fig");
+  if (b.dataset.exp === "png") return exporterPNG(figure);
+  const t = b.dataset.exp === "latex" ? versLatex(figure) : versCsv(figure);
+  if (!t) return toast("Ce bloc n'a pas de tableau à exporter.", true);
+  if (b.dataset.exp === "latex") return copier(t, "Tableau LaTeX");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\ufeff" + t], {type: "text/csv"}));
+  a.download = nomFichier(figure) + ".csv"; a.click();
+});
+
+/* ---------- navigation ---------- */
+$$("nav button").forEach(b => b.onclick = () => montrer(b.dataset.vue));
+function montrer(v){
+  $$("nav button").forEach(b => b.classList.toggle("actif", b.dataset.vue === v));
+  $$(".vue").forEach(s => s.classList.toggle("actif", s.id === "v-" + v));
+  if (v === "scenes") chargerScenes();
+  if (v === "stats") chargerStats();
+  if (v === "experiences") chargerExperiences();
+  if (v === "analyses") chargerAnalyses();
+}
+
+/* ---------- réglages ---------- */
+const DEFAUTS = {ollama:"qwen3.5:4b", openai:"gpt-4o-mini", anthropic:"claude-sonnet-5-5", test:""};
+const CHAMPS = ["mode","taille","backend","modele","base_url","temperature","tours","max_tokens","sans_reflexion","mediateur","juger","modele_juge","etiquette"];
+function lireReglages(){ const r = {}; CHAMPS.forEach(c => { const e = $("#"+c); r[c] = e.type === "checkbox" ? e.checked : e.value }); r.taille = +r.taille; return r }
+const TAILLE = () => +$("#taille").value;
+function majReglages(){
+  $("#v-temp").textContent = (+$("#temperature").value).toFixed(1);
+  $("#v-tours").textContent = $("#tours").value;
+  $("#modele").disabled = $("#backend").value === "test";
+  $("#mediateur").disabled = $("#mode").value !== "negociation";
+  if ($("#mode").value === "debat" && $("#taille").value === "3") $("#taille").value = "2";
+  $("#taille").querySelector('[value="3"]').disabled = $("#mode").value === "debat";
+  $("#mediateur").parentElement.style.opacity = $("#mediateur").disabled ? .5 : 1;
+  memo.ecrire("reglages", lireReglages());
+}
+(function(){ const r = memo.lire("reglages", {}); CHAMPS.forEach(c => { if (r[c] === undefined) return; const e = $("#"+c); e.type === "checkbox" ? e.checked = r[c] : e.value = r[c] }) })();
+CHAMPS.forEach(c => $("#"+c).addEventListener("input", () => { majReglages(); majProtocole() }));
+$("#backend").addEventListener("change", () => { $("#modele").value = DEFAUTS[$("#backend").value]; majReglages() });
+$("#mode").addEventListener("change", () => { majReglages(); dessinerChoix() });
+$("#taille").addEventListener("change", () => { choisis = choisis.slice(0, TAILLE()); majReglages(); dessinerChoix() });
+majReglages();
+
+/* ---------- le protocole, écrit en toutes lettres ---------- */
+function ouvrirProtocole(){ $("#proto").classList.add("ouvert"); $("#proto .fermer").focus() }
+function fermerProtocole(){ $("#proto").classList.remove("ouvert") }
+const VIRG = x => String(x).replace(".", ",");
+function majProtocole(){
+  const r = lireReglages(), m = lireConfig()?.marges;
+  const modele = r.backend === "test" ? "répliques scriptées (mode test)" : `${r.backend} ${r.modele || ""}`.trim();
+  const phrase = [
+    `<b>${r.mode === "debat" ? "Débat" : "Négociation"}</b> à <b>${r.taille}</b> agents`,
+    `modèle <b>${esc(modele)}</b>`,
+    `température ${VIRG((+r.temperature).toFixed(1))}`,
+    `${r.tours} répliques au plus`,
+    r.mode === "negociation" ? (r.mediateur ? "syndic actif" : "sans syndic") : null,
+    r.juger ? "scènes évaluées par le juge" : null,
+    m ? `marges ${VIRG(m.contre)} / ${VIRG(m.partage)} / ${VIRG(m.pour)} % du revenu` : null,
+    r.etiquette ? `essai « ${esc(r.etiquette)} »` : null,
+  ].filter(Boolean).join(", ") + ".";
+  $$(".proto-texte").forEach(e => e.innerHTML = phrase);
+}
+
+/* Le modèle choisi répond-il ? (vérifié à chaque changement de backend, modèle ou URL) */
+let seqModele = 0;
+async function verifierModele(){
+  const mon = ++seqModele, e = $$('[data-etat=modele]');
+  voyants(e, null, "Vérification…");
+  try {
+    const q = new URLSearchParams({backend: $("#backend").value, modele: $("#modele").value, base_url: $("#base_url").value});
+    const r = await api("/api/modele?" + q);
+    if (mon !== seqModele) return;
+    voyants(e, r.ok, r.message);
+  } catch (err) { if (mon === seqModele) voyants(e, false, "Serveur du labo injoignable.") }
+}
+["#backend", "#modele", "#base_url"].forEach(s => $(s).addEventListener("input", retarder(verifierModele, 400)));
+verifierModele();
+
+/* ---------- configuration du scénario ---------- */
+const CFG_SCENARIO = ["titre","lieu","projet","urgent","budget_annuel"];
+const CFG_OBJECTIFS = ["contre","pour","partage","sante"];
+const CFG_MARGES = ["contre","partage","pour"];
+const PARTS = {urgent:[4,"réparations urgentes"], hall:[8,"rénovation du hall"], ascenseur:[15,"nouvel ascenseur"], visiophone:[3,"visiophone"]};
+let DEFAUT = null, COLONNES = {}, seqCfg = 0;
+
+function ecrireConfig(c){
+  CFG_SCENARIO.forEach(k => $("#cfg-s-" + k).value = c.scenario[k] ?? "");
+  CFG_OBJECTIFS.forEach(k => $("#cfg-o-" + k).value = c.objectifs[k] ?? "");
+  CFG_MARGES.forEach(k => $("#cfg-m-" + k).value = (c.marges || DEFAUT.marges)[k] ?? "");
+  $("#cfg-elig").value = c.eligibilite ?? "";
+}
+function lireConfig(){
+  if (!DEFAUT) return null;
+  return {scenario: Object.fromEntries(CFG_SCENARIO.map(k => [k, $("#cfg-s-" + k).value])),
+          objectifs: Object.fromEntries(CFG_OBJECTIFS.map(k => [k, $("#cfg-o-" + k).value])),
+          marges: Object.fromEntries(CFG_MARGES.map(k => [k, $("#cfg-m-" + k).value])),
+          eligibilite: $("#cfg-elig").value};
+}
+function configModifiee(c){
+  const d = DEFAUT;
+  return CFG_SCENARIO.some(k => String(c.scenario[k]).trim() !== String(d.scenario[k]).trim())
+      || CFG_OBJECTIFS.some(k => c.objectifs[k].trim() !== d.objectifs[k].trim())
+      || CFG_MARGES.some(k => +c.marges[k] !== +d.marges[k])
+      || c.eligibilite.trim() !== d.eligibilite.trim();
+}
+function dessinerPostes(){
+  const budget = +$("#cfg-s-budget_annuel").value || 0, total = Object.values(PARTS).reduce((s, p) => s + p[0], 0);
+  $("#cfg-postes").innerHTML = Object.values(PARTS).map(([part, nom]) =>
+    `<tr><td>${nom}</td><td class="mono" style="text-align:right">${Math.round(budget * part / total).toLocaleString("fr-FR")} €</td></tr>`).join("");
+}
+function dessinerColonnes(){
+  $("#colonnes-dispo").innerHTML = "<span>Colonnes :</span>" + Object.entries(COLONNES).map(([k, v]) =>
+    `<span><code>${esc(k)}</code>${v ? " " + v.map(x => esc(x)).join(" · ") : " (nombre)"}</span>`).join("");
+}
+
+async function appliquerConfig(){
+  const cfg = lireConfig(); if (!cfg) return;
+  const mon = ++seqCfg;
+  memo.ecrire("config", {base: DEFAUT, cfg});
+  $("#cfg-modif").style.display = configModifiee(cfg) ? "" : "none";
+  $("#titre-scenario").textContent = cfg.scenario.titre;
+  dessinerPostes();
+  try {
+    const pop = await api("/api/population", {config: cfg});
+    if (mon !== seqCfg) return;
+    POP = pop; PARID = {}; POP.forEach(a => PARID[a.id] = a);
+    $("#cfg-erreur").innerHTML = "";
+    choisis = choisis.filter(id => PARID[id] && PARID[id].eligible);
+    const el = POP.filter(a => a.eligible), n = p => el.filter(a => a.position === p).length;
+    $("#cfg-resume").textContent = el.length
+      ? `${el.length} agents éligibles sur ${POP.length} · ${n("pour")} pour · ${n("contre")} contre · ${n("partage")} partagés`
+      : `Aucun agent éligible sur ${POP.length}`;
+    dessinerPopulation(); remplirSelect(); dessinerChoix(); majProtocole();
+  } catch (e) {
+    if (mon !== seqCfg) return;
+    $("#cfg-erreur").innerHTML = `<div class="bandeau alerte"><b>Configuration invalide.</b> ${esc(e.message)}</div>`;
+    $("#cfg-resume").textContent = "Les derniers réglages valides restent utilisés pour l'affichage.";
+  }
+}
+$$("#v-scenario input, #v-scenario textarea").forEach(e => e.addEventListener("input", retarder(appliquerConfig, 450)));
+$("#cfg-reset").onclick = () => { if (!DEFAUT) return; ecrireConfig(DEFAUT); appliquerConfig(); toast("Valeurs du code rétablies.") };
+
+/* ---------- état ---------- */
+let POP = [], PARID = {}, choisis = [], modeSerie = false, modeManuel = false, JOB = null;
+
+["#mode-agents", "#ex-tirage"].forEach(s => $(s).innerHTML = Object.entries(TIRAGES).map(([k, [t]]) => `<option value="${k}">${t}</option>`).join(""));
+$("#ex-tirage").value = "opposes_zone";
+
+verifierVoix();
+try { $("#voix_auto").checked = !!memo.lire("voix_auto", false) } catch {}
+$("#voix_auto").addEventListener("change", () => memo.ecrire("voix_auto", $("#voix_auto").checked));
+api("/api/etat").then(async e => {
+  DEFAUT = e.defaut; COLONNES = e.colonnes || {};
+  const sauve = memo.lire("config", null);
+  ecrireConfig(sauve && JSON.stringify(sauve.base) === JSON.stringify(DEFAUT) ? sauve.cfg : DEFAUT);
+  dessinerColonnes();
+  await appliquerConfig();
+  initVariantes();
+});
+
+/* file d'attente : rafraîchie en continu */
+async function majFile(){
+  try {
+    const e = await api("/api/etat");
+    const t = e.travaux;
+    $("#file").innerHTML = t.length ? t.map(x => `<div><b>${{scene:"Scène",serie:"Série",experience:"Expérience"}[x.sorte]}</b> · ${x.etat} · <span class="mono">${x.fait}/${x.total}</span></div>`).join("") : "Aucun travail en cours.";
+  } catch {}
+  setTimeout(majFile, 2500);
+}
+majFile();
+
+/* ---------- population ---------- */
+let popVue = "elig";
+$$("#pop-seg button").forEach(b => b.onclick = () => { $$("#pop-seg button").forEach(x => x.classList.toggle("actif", x === b)); popVue = b.dataset.v; dessinerPopulation() });
+["#f-texte","#f-revenu","#f-age","#f-pos"].forEach(s => $(s).addEventListener("input", dessinerPopulation));
+
+function ocean(a){
+  return `<div class="ocean">${["ouverture","conscienciosite","extraversion","agreabilite","nevrosisme"].map(t => `<i style="height:${Math.max(2,(a[t]-1)/4*18)}px" title="${t} ${a[t]}"></i>`).join("")}</div>`;
+}
+let tri = {col: "id", sens: 1};
+const ORDRE_POS = {pour: 0, partage: 1, contre: 2, "": 3};
+$$("#pop-tete th[data-tri]").forEach(th => th.onclick = () => {
+  tri = {col: th.dataset.tri, sens: tri.col === th.dataset.tri ? -tri.sens : 1}; dessinerPopulation();
+});
+function cleTri(a){
+  const c = tri.col;
+  if (c === "nom") return `${a.nom} ${a.prenom}`.toLowerCase();
+  if (c === "position") return ORDRE_POS[a.position || ""];
+  if (c === "effort_pct") return a.effort_pct ?? Infinity;
+  return typeof a[c] === "string" ? a[c].toLowerCase() : a[c];
+}
+function dessinerRepartition(l){
+  const n = p => l.filter(a => (a.position || "") === p).length, total = l.length || 1;
+  const parts = [["pour", "pour", "var(--pour)"], ["partage", "partagés", "var(--partage)"], ["contre", "contre", "var(--contre)"], ["", "non éligibles", "var(--filet2)"]]
+    .map(([p, nom, c]) => ({nom, c, k: n(p)})).filter(x => x.k);
+  $("#pop-rep").innerHTML = l.length ? `<div class="barre">${parts.map(x => `<i style="width:${100 * x.k / total}%;background:${x.c}" title="${x.k} ${x.nom}"></i>`).join("")}</div>
+    <div class="leg">${parts.map(x => `<span style="--c:${x.c}">${x.k} ${x.nom}</span>`).join("")}</div>` : "";
+}
+function dessinerPopulation(){
+  const t = $("#f-texte").value.toLowerCase(), rv = $("#f-revenu").value, ag = $("#f-age").value, ps = $("#f-pos").value;
+  const l = POP.filter(a => (popVue === "tous" || a.eligible) && (!rv || a.revenu === rv) && (!ag || a.age === ag) && (!ps || a.position === ps)
+     && (!t || `${a.prenom} ${a.nom} ${a.situation}`.toLowerCase().includes(t)));
+  l.sort((x, y) => { const a = cleTri(x), b = cleTri(y); return (a < b ? -1 : a > b ? 1 : 0) * tri.sens });
+  $$("#pop-tete th[data-tri]").forEach(th => th.className = th.dataset.tri === tri.col ? (tri.sens > 0 ? "asc" : "desc") : "");
+  dessinerRepartition(l);
+  $("#pop-resume").textContent = `${l.length} agents affichés sur ${POP.length}`;
+  $("#pop-note").innerHTML = lecture(`un agent est « éligible » s'il satisfait le critère fixé dans le Scénario ; sa position et son effort sont calculés à partir de sa quote-part et de son revenu. ${l.length} agent(s) affiché(s) sur ${POP.length}.`);
+  $("#pop-corps").innerHTML = l.map(a => `<tr data-id="${a.id}" class="${choisis.includes(a.id)?"choisi":""}">
+    <td class="mono" style="color:var(--encre2)">${a.id}</td>
+    <td><b style="font-weight:500">${esc(a.prenom)} ${esc(a.nom)}</b></td>
+    <td class="mono">${a.age_annees}</td>
+    <td>${esc(a.situation)}</td>
+    <td><span class="mono">${a.revenu_mensuel.toLocaleString("fr-FR")} €</span> <span style="color:var(--encre2)">${a.revenu === "aise" ? "aisé" : a.revenu}</span></td>
+    <td>${a.logement === "proprietaire" ? "propriétaire" : a.logement === "locataire" ? "locataire" : "logé gratuitement"} · ${a.zone}</td>
+    <td>${a.position ? `<span class="pastille ${a.position}">${POS[a.position]}</span>` : ""}</td>
+    <td>${a.effort_pct != null ? `<div class="effort"><b style="width:${Math.min(60, a.effort_pct*2)}px"></b><span class="mono">${a.effort_pct} %</span></div>` : ""}</td>
+    <td>${ocean(a)}</td></tr>`).join("") || `<tr><td colspan="9" class="vide">Aucun agent ne correspond à ces filtres.</td></tr>`;
+  $$("#pop-corps tr").forEach(tr => tr.onclick = () => ouvrirFiche(+tr.dataset.id));
+}
+async function ouvrirFiche(id){
+  const d = await api("/api/agent", {id, config: lireConfig()}), a = PARID[id];
+  const e = d.enjeux;
+  $("#tiroir-corps").innerHTML = `
+    <div style="color:var(--encre2);font-size:13px">Agent ${id}</div>
+    <h2 style="font-size:22px;margin-top:2px">${esc(d.nom)}</h2>
+    ${a.position ? `<div style="margin-top:8px"><span class="pastille ${a.position}">${POS[a.position]}</span></div>` : ""}
+    <pre class="fiche">${esc(d.fiche)}</pre>
+    ${e ? `<h3 style="font-size:17px;margin-bottom:8px">Enjeux</h3><dl class="kv">
+      <dt>Part des travaux</dt><dd class="mono">${e.part_annuelle} € / an · ${e.mensuel} € / mois</dd>
+      <dt>Effort</dt><dd class="mono">${e.effort_pct} % du revenu</dd>
+      <dt>Objectif</dt><dd>${esc(e.objectif)}</dd></dl>` : ""}
+    ${d.marge ? `<h3 style="font-size:17px;margin:18px 0 8px">Marge secrète</h3><dl class="kv">${Object.entries(d.marge).map(([k,v]) => `<dt>${esc(k)}</dt><dd>${esc(Array.isArray(v) ? (v.join(", ") || "rien") : v)}</dd>`).join("")}</dl>` : ""}
+    ${a.eligible ? `<button class="btn principal" style="margin-top:22px" onclick="ajouter(${id});fermerTiroir();montrer('lancer')">Ajouter à la scène</button>` : ""}`;
+  $("#tiroir").classList.add("ouvert");
+}
+function fermerTiroir(){ $("#tiroir").classList.remove("ouvert") }
+document.addEventListener("keydown", e => { if (e.key === "Escape"){ fermerTiroir(); fermerProtocole() } });
+
+/* ---------- lancer ---------- */
+function remplirSelect(){
+  $("#ajout-select").innerHTML = `<option value="">Choisir un agent éligible…</option>` + POP.filter(a => a.eligible)
+    .map(a => `<option value="${a.id}">${a.id} · ${esc(a.prenom)} ${esc(a.nom)} — ${POS[a.position]} (${a.effort_pct} %)</option>`).join("");
+}
+function ajouter(id){
+  if (!id || choisis.includes(id)) return;
+  if (choisis.length >= TAILLE()) choisis.shift();
+  choisis.push(id); dessinerChoix();
+}
+$("#ajout-btn").onclick = () => ajouter(+$("#ajout-select").value);
+$("#auto-btn").onclick = async () => {
+  try { const r = await api("/api/paire", {graine: +$("#graine").value, config: lireConfig(), exiger_zone: $("#mode").value === "negociation", taille: TAILLE()}); choisis = r.ids; dessinerChoix() }
+  catch (e) { $("#zone-bandeau").innerHTML = `<div class="bandeau alerte">${esc(e.message)}</div>` }
+};
+$$("#mode-seg button").forEach(b => b.onclick = () => {
+  $$("#mode-seg button").forEach(x => x.classList.toggle("actif", x === b));
+  modeSerie = b.dataset.v === "serie";
+  $("#barre-serie").style.display = modeSerie ? "flex" : "none";
+  dessinerChoix();
+});
+$("#mode-agents").onchange = () => { modeManuel = true; dessinerChoix() };
+function retirer(id){ choisis = choisis.filter(x => x !== id); dessinerChoix() }
+
+function majModeAgents(){
+  const m = $("#mode-agents");
+  const complet = choisis.length === TAILLE();
+  m.querySelector('[value="memes"]').disabled = !complet;
+  if (!complet && m.value === "memes") m.value = "opposes_zone";
+  else if (complet && !modeManuel) m.value = "memes";
+  $("#serie-aide").textContent = TIRAGES[m.value][1];
+}
+
+async function dessinerChoix(){
+  $("#cartes").innerHTML = choisis.map((id, k) => { const a = PARID[id]; if (!a) return ""; return `
+    <div class="carte agent">
+      <button class="retirer" onclick="retirer(${id})" title="Retirer">×</button>
+      <div style="font-size:12.5px;color:var(--encre2)">Agent ${id}${k === 0 ? ", ouvre la discussion" : ""}</div>
+      <h3>${esc(a.prenom)} ${esc(a.nom)}</h3>
+      <div class="sous">${a.age_annees} ans · ${esc(a.situation)} · ${esc(a.foyer_txt)}</div>
+      <span class="pastille ${a.position}">${POS[a.position]}</span>
+      <div class="chiffres"><div><b>${a.revenu_mensuel.toLocaleString("fr-FR")} €</b>revenu / mois</div><div><b>${a.mensuel} €</b>tout le projet / mois</div><div><b>${a.effort_pct} %</b>du revenu</div></div>
+      <div class="profil">${[["ouverture","Ouverture"],["conscienciosite","Rigueur"],["extraversion","Extraversion"],["agreabilite","Agréabilité"],["nevrosisme","Anxiété"]]
+        .map(([k, t]) => `<div title="${t} : ${a[k]} / 5">${t}<b><i style="width:${(a[k] - 1) / 4 * 100}%"></i></b></div>`).join("")}</div>
+      ${a.traits ? `<div class="traits">${esc(a.traits)}</div>` : ""}
+    </div>`}).join("") || `<div class="carte vide" style="grid-column:1/-1">Ajoute ${TAILLE() === 3 ? "trois" : "deux"} agents, ou tire un groupe automatique.</div>`;
+
+  majModeAgents();
+  const aleatoire = modeSerie && $("#mode-agents").value !== "memes";
+  $("#go").textContent = modeSerie ? "▶ Lancer la série" : "▶ Jouer la scène";
+  $("#go").disabled = JOB !== null || (modeSerie ? (!aleatoire && choisis.length !== TAILLE()) : choisis.length !== TAILLE());
+  $$("#pop-corps tr").forEach(tr => tr.classList.toggle("choisi", choisis.includes(+tr.dataset.id)));
+
+  const zb = $("#zone-bandeau"); zb.innerHTML = "";
+  if (choisis.length < 2) return;
+  const qui = choisis.length === 3 ? "les trois agents" : "les deux agents";
+  try {
+    const {zone} = await api("/api/zone", {ids: choisis, config: lireConfig()});
+    if (zone == null) return;
+    if (!zone.length) zb.innerHTML = `<div class="bandeau alerte"><b>Zone d'accord vide.</b> Aucune option n'est acceptable pour ${qui} : un accord serait forcément hors des marges.</div>`;
+    else zb.innerHTML = `<div class="bandeau info"><b>${zone.length} option${zone.length>1?"s":""} acceptable${zone.length>1?"s":""}</b> pour ${qui}${$("#mode").value === "debat" ? " (non utilisée en mode débat)" : ""}.
+       <details style="margin-left:auto"><summary style="cursor:pointer">voir</summary><pre class="mono" style="font-size:12px;white-space:pre-wrap">${esc(zone.join("\n"))}</pre></details></div>`;
+  } catch (e) { zb.innerHTML = `<div class="bandeau alerte">${esc(e.message)}</div>` }
+}
+
+/* Couleur d'un locuteur : celle de sa position (pour, contre, partagé) ; violet pour le syndic */
+function cote(loc, noms, positions){
+  if (/^le syndic/i.test(loc)) return "s";
+  const i = noms.indexOf(loc);
+  const p = positions && positions[i] ? positions[i] : ["pour", "contre", "partage"][Math.max(0, i)];
+  return "p-" + p;
+}
+function bulles(lignes, noms, debut = 0, positions){
+  return lignes.map(([loc, txt, acc], k) =>
+    `<div class="replique ${cote(loc, noms, positions)}" data-k="${debut + k}"><div class="no"><button class="jouer" title="Écouter cette réplique" aria-label="Écouter la réplique ${debut + k + 1}"><span class="n">${debut + k + 1}</span><span class="ico"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg></span></button></div><div class="qui">${esc(loc)}</div><div class="bulle">${esc(txt)}${acc ? '<span class="accord-tag">accord</span>' : ""}</div></div>`).join("");
+}
+/* Fil de la négociation : un repère par réplique (couleur = locuteur, cerclé = accord signalé) */
+function marques(lignes, noms, positions){
+  return lignes.map(([loc, txt, acc]) => `<i class="${cote(loc, noms, positions)}${acc ? " acc" : ""}" title="${esc(loc)}${acc ? " : accord" : ""}"></i>`).join("");
+}
+function transcription(lignes, noms, sceneId, positions){
+  return `<div class="fil"><span class="lbl">Fil de la négociation</span>${marques(lignes, noms, positions)}${sceneId ? barreEcoute(sceneId) : ""}</div>${bulles(lignes, noms, 0, positions)}`;
+}
+
+/* ---------- voix : lecture de la scène, réplique par réplique ---------- */
+let VOIX = {ok: false, message: ""};
+async function verifierVoix(){
+  try { VOIX = await api("/api/voix") } catch { VOIX = {ok: false, message: "Serveur du labo injoignable."} }
+  voyants($$('[data-etat=voix]'), VOIX.ok, VOIX.message);
+  $("#voix_auto").disabled = !VOIX.ok;
+  $$(".ec-btn").forEach(b => { b.disabled = !VOIX.ok; b.title = VOIX.ok ? "" : VOIX.message });
+}
+const ICO_ECOUTE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>';
+function barreEcoute(id){
+  return `<span class="ecoute" data-scene="${esc(id)}"><span class="ec-etat"></span>
+    <a class="btn ec-mp3" hidden download>Télécharger le MP3</a>
+    <button class="btn ec-btn" ${VOIX.ok ? "" : `disabled title="${esc(VOIX.message)}"`}>${ICO_ECOUTE}<span>Écouter la scène</span></button></span>`;
+}
+async function preparerEcoute(cadre){
+  const b = cadre.querySelector(".ecoute"); if (!b) return;
+  try {
+    const {pretes} = await api("/api/audio/" + b.dataset.scene);
+    if (pretes.length && pretes.length >= cadre.querySelectorAll(".replique").length) montrerMp3(cadre);
+  } catch {}
+}
+function montrerMp3(cadre){
+  const b = cadre.querySelector(".ecoute"), a = b.querySelector(".ec-mp3");
+  a.href = `/audio/${b.dataset.scene}/scene.mp3`; a.hidden = false;
+}
+const LECT = {audio: new Audio(), jeton: 0, cadre: null};
+const PISTES = {};
+function piste(id, k){
+  const c = id + ":" + k;
+  if (!PISTES[c]) PISTES[c] = api(`/api/audio/${id}/${k}`, {}).then(r => r.url).catch(e => { delete PISTES[c]; throw e });
+  return PISTES[c];
+}
+function etatEcoute(cadre, texte, enLecture){
+  const b = cadre && cadre.querySelector(".ecoute"); if (!b) return;
+  b.querySelector(".ec-etat").textContent = texte;
+  const btn = b.querySelector(".ec-btn");
+  btn.classList.toggle("lecture", !!enLecture);
+  btn.querySelector("span").textContent = enLecture ? "Arrêter la lecture" : "Écouter la scène";
+}
+function arreterLecture(){
+  LECT.jeton++;
+  const fin = LECT.audio.onended; LECT.audio.pause(); LECT.audio.onended = null; if (fin) fin();
+  if (LECT.cadre){ LECT.cadre.querySelectorAll(".replique.lecture").forEach(r => r.classList.remove("lecture")); etatEcoute(LECT.cadre, "", false) }
+  LECT.cadre = null;
+}
+async function lire(cadre, debut = 0, seule = false){
+  arreterLecture();
+  const jeton = LECT.jeton, id = cadre.querySelector(".ecoute").dataset.scene;
+  const rangs = [...cadre.querySelectorAll(".replique")], n = rangs.length;
+  LECT.cadre = cadre;
+  try {
+    for (let k = debut; k < (seule ? debut + 1 : n); k++){
+      etatEcoute(cadre, `Préparation de la réplique ${k + 1}…`, true);
+      const url = await piste(id, k);
+      if (jeton !== LECT.jeton) return;
+      if (!seule && k + 1 < n) piste(id, k + 1).catch(() => {});        // la suivante se prépare pendant la lecture
+      rangs.forEach(r => r.classList.toggle("lecture", +r.dataset.k === k));
+      rangs[k].scrollIntoView({block: "nearest", behavior: "smooth"});
+      etatEcoute(cadre, seule ? `Réplique ${k + 1}` : `Réplique ${k + 1} sur ${n}`, true);
+      LECT.audio.src = url;
+      await new Promise((ok, ko) => { LECT.audio.onended = ok; LECT.audio.onerror = () => ko(new Error("Le navigateur n'a pas pu lire l'audio.")); LECT.audio.play().catch(ko) });
+      if (jeton !== LECT.jeton) return;
+    }
+    if (!seule) montrerMp3(cadre);
+  } catch (e) {
+    if (jeton === LECT.jeton) toast(e.message, true);
+  } finally {
+    if (jeton === LECT.jeton){ rangs.forEach(r => r.classList.remove("lecture")); etatEcoute(cadre, "", false); LECT.cadre = null }
+  }
+}
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".ec-btn");
+  if (btn){ const cadre = btn.closest(".dialogue"); LECT.cadre === cadre ? arreterLecture() : lire(cadre); return }
+  const j = e.target.closest(".jouer");
+  if (j){
+    const cadre = j.closest(".dialogue");
+    if (!cadre.querySelector(".ecoute")) return;
+    if (!VOIX.ok){ toast(VOIX.message, true); return }
+    lire(cadre, +j.closest(".replique").dataset.k, true);
+  }
+});
+function verdict(r){
+  if (r.erreur) return `<div class="bandeau alerte" style="margin-top:16px">${esc(r.erreur)}</div>`;
+  if (r.mode !== "negociation") return `<div class="verdict">
+    <div class="carte"><small>Mode</small><b>${MODES[r.mode] || r.mode}</b><div class="detail">pas d'accord mesuré</div></div>
+    <div class="carte"><small>Répliques</small><b class="mono">${r.dialogue.length}</b></div>
+    <div class="carte"><small>Mal formées</small><b class="mono">${r.mal_formees ?? 0}</b></div>
+    <div class="carte"><small>Durée</small><b class="mono">${r.duree_s} s</b></div></div>${credibilite(r)}`;
+  const cpa = r.coherent_par_agent;
+  const det = cpa ? r.noms.map((n, i) => `${esc(n.split(" ")[0])} ${cpa[i] ? "✓" : "✗"}`).join(" · ") : "";
+  let jauges = "";
+  if (r.hausses && r.plafonds){
+    jauges = r.noms.map((n, i) => { const max = Math.max(r.plafonds[i], r.hausses[i]) * 1.15;
+      return `<div style="font-size:12.5px;margin-top:${i ? 14 : 0}px"><b style="font-weight:500">${esc(n)}</b> : <span class="mono">${r.hausses[i]} €</span> de hausse par mois · plafond secret <span class="mono">${r.plafonds[i]} €</span>
+        <div class="jauge"><span class="z" style="left:0;width:${100*r.plafonds[i]/max}%"></span><span class="m" style="left:${100*r.hausses[i]/max}%;background:${r.hausses[i] <= r.plafonds[i] + .5 ? "var(--navy)" : "var(--contre)"}"></span></div></div>` }).join("");
+  }
+  return `<div class="verdict">
+    <div class="carte"><small>Accord</small><b>${ouinon(r.accord)}</b><div class="detail">${r.tour_accord ? "à la réplique " + r.tour_accord : r.zone_vide ? "zone d'accord vide" : ""}</div></div>
+    <div class="carte"><small>Dans les marges</small><b>${ouinon(r.coherent)}</b><div class="detail">${det}</div></div>
+    <div class="carte"><small>Syndic</small><b>${r.mediateur ? "intervenu" : "non"}</b><div class="detail">${r.tour_syndic ? "après la réplique " + r.tour_syndic : ""}</div></div>
+    <div class="carte"><small>Position dans la zone</small><b class="mono">${r.position_zone != null ? r.position_zone.toFixed(2) : "—"}</b><div class="detail">0 = option la plus modeste, 1 = la plus ambitieuse</div></div></div>
+    ${r.proposition_finale ? `<div class="bandeau info" style="margin:12px 0 0;display:block"><b>Proposition retenue :</b> ${esc(r.proposition_finale)}
+      <span style="opacity:.7;font-size:12px">(extraite par ${{secretaire:"le secrétaire de séance", mots_cles:"mots-clés", script:"le script de test"}[r.methode_extraction] || "—"})</span></div>
+      ${jauges ? `<div class="carte" style="padding:14px 18px;margin-top:10px">${jauges}<div class="aide" style="margin-top:8px">Zone verte : ce que l'agent peut accepter ; trait : la hausse retenue.</div></div>` : ""}` : ""}
+    <div class="aide" style="margin-top:6px">Zone d'accord : ${r.zone_taille ?? "—"} option(s) · ${r.duree_s} s · ${r.mal_formees ?? 0} défaut(s) de forme</div>
+    ${trajectoire(r)}${credibilite(r)}`;
+}
+
+/* ---------- trajectoire des propositions : qui a proposé quoi, et qui a cédé ---------- */
+const COUL = {pour: "var(--pour)", contre: "var(--contre)", partage: "var(--partage)"};
+const keur = v => (v / 1000).toLocaleString("fr-FR", {maximumFractionDigits: 1}) + " k€";
+function trajectoire(r){
+  const props = r.propositions, dial = r.dialogue;
+  if (!props || !props.some(Boolean) || !dial || !dial.length) return "";
+  const n = dial.length, W = 820, H = 240, ml = 58, mr = 70, mt = 14, mb = 28;
+  const valeurs = props.filter(Boolean).map(p => p.cout_annuel).concat(r.zone_couts || []);
+  const pas = 5000, ymax = Math.max(pas, Math.ceil(Math.max(...valeurs) * 1.05 / pas) * pas);
+  const x = k => ml + (n > 1 ? k / (n - 1) : .5) * (W - ml - mr), y = v => mt + (1 - v / ymax) * (H - mt - mb);
+  let g = "";
+  for (let v = 0; v <= ymax; v += pas)
+    g += `<line x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--filet)"/><text x="${ml - 8}" y="${y(v) + 4}" text-anchor="end" class="ax">${keur(v)}</text>`;
+  for (let k = 0; k < n; k++) if (n <= 24 || k % 2 === 0) g += `<text x="${x(k)}" y="${H - 8}" text-anchor="middle" class="ax">${k + 1}</text>`;
+  if (r.zone_couts){
+    const [lo, hi] = r.zone_couts;
+    g = `<rect x="${ml}" width="${W - ml - mr}" y="${y(hi)}" height="${Math.max(3, y(lo) - y(hi))}" fill="var(--oui)" opacity=".12"/>
+         <text x="${ml + 6}" y="${y(hi) - 5}" class="ax" fill="var(--oui)">zone d'accord</text>` + g;
+  }
+  if (r.tour_syndic) g += `<line x1="${x(r.tour_syndic - 1)}" x2="${x(r.tour_syndic - 1)}" y1="${mt}" y2="${H - mb}" stroke="var(--syndic)" stroke-dasharray="3 3"/><text x="${x(r.tour_syndic - 1) + 4}" y="${mt + 10}" class="ax" fill="var(--syndic)">syndic</text>`;
+  const finale = r.accord && r.concessions && r.concessions.find(c => c.finale != null);
+  if (finale) g += `<line x1="${ml}" x2="${W - mr}" y1="${y(finale.finale)}" y2="${y(finale.finale)}" stroke="var(--oui)" stroke-dasharray="6 4"/><text x="${W - mr + 6}" y="${y(finale.finale) + 4}" class="ax" fill="var(--oui)" font-weight="600">accord</text>`;
+  r.noms.forEach((nom, i) => {
+    const c = COUL[r.positions[i]] || "var(--encre2)";
+    const pts = dial.map((d, k) => d[0] === nom && props[k] ? [k, props[k].cout_annuel] : null).filter(Boolean);
+    if (!pts.length) return;
+    let d = `M${x(pts[0][0])},${y(pts[0][1])}`;
+    for (let j = 1; j < pts.length; j++) d += ` H${x(pts[j][0])} V${y(pts[j][1])}`;
+    g += `<path d="${d}" fill="none" stroke="${c}" stroke-width="2.2"/>` +
+         pts.map(([k, v]) => `<circle cx="${x(k)}" cy="${y(v)}" r="4.5" fill="var(--bloc)" stroke="${c}" stroke-width="2.2"><title>${esc(nom)}, réplique ${k + 1} : ${keur(v)} par an</title></circle>`).join("");
+  });
+  const leg = (r.concessions || []).map((c, i) => {
+    const coul = COUL[c.position] || "var(--encre2)";
+    let t = "aucune proposition repérée";
+    if (c.concession_eur != null){
+      const m = Math.abs(c.concession_eur).toLocaleString("fr-FR") + " € par an", part = Math.round(Math.abs(c.concession_part) * 100);
+      t = c.concession_eur > 0 ? `a fait ${m} de chemin vers les autres (${part} % du budget)` : c.concession_eur < 0 ? `s'est éloigné de ${m}` : "n'a pas bougé";
+    }
+    return `<div class="leg-agent"><i style="background:${coul}"></i><b>${esc(c.nom)}</b><span>${t}</span></div>`;
+  }).join("");
+  return fig("figure", "Trajectoire des propositions",
+    `<div class="trajectoire"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Trajectoire des propositions">${g}</svg>
+     <div class="legende">${leg}</div></div>`,
+    lecture(`chaque ligne suit un agent : en ordonnée, le coût annuel du projet pour la copropriété selon la proposition qu'il défend ; en abscisse, le numéro de la réplique. La bande verte est la zone d'accord, l'ensemble des options acceptables par tous.`),
+    `<b>Source :</b> propositions ${r.methode_propositions === "secretaire" ? "relevées par le secrétaire de séance (le modèle)" : "repérées par mots-clés"} dans la transcription.`);
+}
+
+/* ---------- crédibilité : chiffres et juge ---------- */
+const CRED = {};
+function credibilite(r){
+  if (!r.chiffres && !r.juge) return "";
+  if (r.scene_id) CRED[r.scene_id] = r;
+  return `<div class="carte credibilite" id="cred-${esc(r.scene_id || "x")}">${contenuCredibilite(r)}</div>`;
+}
+function contenuCredibilite(r){
+  const ch = r.chiffres, ev = r.juge && !r.juge.erreur ? r.juge : null;
+  const badge = r.valide === true ? '<span class="pastille" style="background:var(--oui-pale);color:var(--oui)">scène valide</span>'
+              : r.valide === false ? '<span class="pastille" style="background:var(--non-pale);color:var(--non)">scène non valide</span>' : "";
+  const note = v => v == null ? "—" : `<b class="note n${v}">${v}</b><span class="sur">/5</span>`;
+  let juge = "";
+  if (ev){
+    juge = `<div class="notes">
+      ${Object.entries(ev.fidelite || {}).map(([n, v]) => `<div><small>Fidélité de ${esc(n.split(" ")[0])}</small>${note(v)}</div>`).join("")}
+      <div><small>Cohérence</small>${note(ev.coherence)}</div><div><small>Naturel</small>${note(ev.naturel)}</div></div>
+      ${ev.commentaire ? `<p class="commentaire">${esc(ev.commentaire)}</p>` : ""}
+      <div class="aide">Jugé par ${esc(ev.juge || "le modèle")}. <button class="lien" data-juger="${esc(r.scene_id)}">Faire réévaluer</button></div>`;
+  } else if (r.juge && r.juge.erreur){
+    juge = `<p class="aide non">Le juge a échoué : ${esc(r.juge.erreur)}</p>${r.scene_id ? `<button class="btn" data-juger="${esc(r.scene_id)}">Réessayer</button>` : ""}`;
+  } else if (r.scene_id){
+    juge = `<p class="aide" style="margin:6px 0 10px">Pas encore évaluée par le juge (un appel au modèle choisi dans la barre latérale).</p><button class="btn" data-juger="${esc(r.scene_id)}">Faire évaluer par le juge</button>`;
+  }
+  return `<div class="cred-tete"><h4>Crédibilité de la scène</h4>${badge}</div>
+    ${ch ? `<p class="aide" style="margin:2px 0 10px">${ch.montants} montant(s) en euros cité(s), <b class="${ch.inventes ? "non" : "oui"}">${ch.inventes} inventé(s)</b>${ch.inventes ? " : " + ch.exemples.map(esc).join(", ") : ""}.</p>` : ""}
+    ${juge}`;
+}
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-juger]"); if (!b) return;
+  const id = b.dataset.juger, cadre = $("#cred-" + CSS.escape(id));
+  b.disabled = true; b.textContent = "Évaluation en cours…";
+  try {
+    const ev = await api("/api/juger/" + id, {reglages: lireReglages()});
+    const r = CRED[id] || {};
+    r.juge = ev; r.valide = ev.valide; r.chiffres = ev.chiffres || r.chiffres;
+    if (cadre) cadre.innerHTML = contenuCredibilite(r);
+    toast("Scène évaluée par le juge.");
+  } catch (err) { toast(err.message, true); b.disabled = false; b.textContent = "Réessayer" }
+});
+
+$("#go").onclick = async () => {
+  arreterLecture();
+  const reg = lireReglages();
+  const memes = !modeSerie || $("#mode-agents").value === "memes";
+  const corps = {sorte: modeSerie ? "serie" : "scene", reglages: reg, etiquette: reg.etiquette, n: modeSerie ? +$("#nb").value : 1,
+                 ids: memes ? choisis : [], graine: +$("#graine").value, config: lireConfig(),
+                 mode_agents: modeSerie ? $("#mode-agents").value : "memes"};
+  try {
+    const {job} = await api("/api/lancer", corps);
+    JOB = job; $("#go").disabled = true; $("#stop").style.display = "";
+    const j = modeSerie ? await suivreSerie(job, corps.n) : await suivreScene(job);
+    if (modeSerie) toast(j.etat === "arrêté" ? `Série arrêtée après ${j.fait} scène(s).` : `Série terminée : ${j.fait} scène(s) enregistrées.`);
+    else toast(j && j.etat === "arrêté" ? "Scène arrêtée." : "Scène enregistrée dans le journal.");
+  } catch (e) {
+    $("#sortie").innerHTML = `<div class="bandeau alerte" style="margin-top:20px">${esc(e.message)}</div>`;
+    toast(e.message, true);
+  }
+  JOB = null; $("#stop").style.display = "none"; dessinerChoix();
+};
+$("#stop").onclick = () => { if (JOB){ api("/api/arreter/" + JOB, {}); toast("Arrêt demandé : la scène s'interrompt à la réplique suivante.") } };
+
+async function suivreScene(job){
+  $("#sortie").innerHTML = `<h3 class="sec">La scène</h3><div class="carte dialogue" id="dlg"><div class="fil" id="fil"><span class="lbl">Fil de la négociation</span></div><div class="ecrit" id="dlg-etat">En attente…</div></div><div id="vd"></div>`;
+  let affichees = 0;                                   // répliques déjà à l'écran : on n'ajoute que les nouvelles
+  const etat = t => { const e = $("#dlg-etat"); if (e) { e.textContent = t; e.style.display = t ? "" : "none" } };
+  while (true){
+    const j = await api("/api/job/" + job);
+    const noms = j.agents.map(a => a.nom), positions = j.agents.map(a => a.enjeux && a.enjeux.position);
+    if (j.lignes.length > affichees){
+      $("#dlg-etat").insertAdjacentHTML("beforebegin", bulles(j.lignes.slice(affichees), noms, affichees, positions));
+      $("#fil").insertAdjacentHTML("beforeend", marques(j.lignes.slice(affichees), noms, positions));
+      affichees = j.lignes.length;
+    }
+    if (j.etat === "en attente") etat(`En attente : ${j.file} travail(aux) avant celui-ci.`);
+    else if (j.etat === "en cours") etat(affichees ? "Réplique suivante en cours d'écriture…" : "Les agents se croisent dans le hall…");
+    if (j.etat === "fini" || j.etat === "arrêté"){
+      const r = j.dernier;
+      if (!r){ etat(j.erreur_job || "Scène arrêtée."); return j }
+      if (r.dialogue.length > affichees){
+        $("#dlg-etat").insertAdjacentHTML("beforebegin", bulles(r.dialogue.slice(affichees), r.noms, affichees, r.positions));
+        $("#fil").insertAdjacentHTML("beforeend", marques(r.dialogue.slice(affichees), r.noms, r.positions));
+      }
+      etat(r.dialogue.length ? "" : "Aucune réplique.");
+      $("#vd").innerHTML = verdict(r);
+      if (r.dialogue.length && !r.erreur){
+        $("#fil").insertAdjacentHTML("beforeend", barreEcoute(r.scene_id));
+        if ($("#voix_auto").checked && VOIX.ok) lire($("#dlg"));
+      }
+      return j;
+    }
+    await pause(600);
+  }
+}
+function tableauResultats(res){
+  return res.map(r => `<tr>${r.variante != null ? `<td>${esc(r.variante)}</td>` : ""}<td>${r.noms.map((nom, i) => `${esc(nom)} <span class="pastille ${r.positions[i]}">${POS[r.positions[i]] || ""}</span>`).join(" / ")}</td>
+    <td>${r.erreur ? `<span class="non" title="${esc(r.erreur)}">${r.erreur === "Interrompue" ? "arrêtée" : "erreur"}</span>` : r.mode === "negociation" ? ouinon(r.accord) : "débat"}</td><td>${ouinon(r.coherent)}</td>
+    <td>${r.mediateur ? "oui" : "non"}</td><td>${r.zone_vide == null ? "—" : r.zone_vide ? "oui" : "non"}</td><td class="mono">${r.duree_s} s</td></tr>`).join("");
+}
+async function suivreSerie(job, n, cible = "#sortie", variantes = false){
+  const box = $(cible), q = s => box.querySelector(s);
+  box.innerHTML = `<div class="carte" style="padding:20px 22px;margin-top:20px">
+    <div style="display:flex;justify-content:space-between"><b style="font-size:16px;font-weight:600" class="sr-titre">En attente</b><span class="mono sr-n">0 / ${n}</span></div>
+    <div class="progression"><i class="sr-barre" style="width:0"></i></div>
+    <div class="sr-courante" style="color:var(--encre2);font-size:13px"></div>
+    <div style="max-height:360px;overflow:auto;margin-top:12px"><table><thead><tr>${variantes ? "<th>Variante</th>" : ""}<th>Agents</th><th>Accord</th><th>Marges</th><th>Syndic</th><th>Zone vide</th><th>Durée</th></tr></thead><tbody class="sr-corps"></tbody></table></div></div>`;
+  while (true){
+    const j = await api("/api/job/" + job);
+    q(".sr-n").textContent = `${j.fait} / ${j.total}`; q(".sr-barre").style.width = (100 * j.fait / j.total) + "%";
+    q(".sr-titre").textContent = {"en attente":"En attente", "en cours":"En cours", fini:"Terminé", "arrêté":"Arrêté"}[j.etat];
+    q(".sr-courante").textContent = j.etat === "en attente" ? `${j.file} travail(aux) avant celui-ci.` :
+      j.etat !== "en cours" ? (j.erreur_job ? "Interrompu : " + j.erreur_job : "Résultats enregistrés dans le journal.") :
+      `Scène ${j.courante + 1}${j.variante ? " · variante " + j.variante : ""} : ${j.agents.map(a => a.nom).join(" / ")} · ${j.lignes.length} réplique(s)`;
+    q(".sr-corps").innerHTML = tableauResultats([...j.resultats].reverse());
+    if (j.etat === "fini" || j.etat === "arrêté") return j;
+    await pause(800);
+  }
+}
+
+/* ---------- expériences ---------- */
+let VARIANTES = [];
+function varianteDepuisReglages(nom){
+  const r = lireReglages(), m = lireConfig()?.marges || {};
+  return {nom, mode: r.mode, taille: r.taille, backend: r.backend, modele: r.modele, temperature: +r.temperature, tours: +r.tours,
+          mediateur: r.mediateur, marges: {contre: +m.contre, partage: +m.partage, pour: +m.pour}};
+}
+function initVariantes(){
+  VARIANTES = memo.lire("variantes", null) || [varianteDepuisReglages("référence"), {...varianteDepuisReglages("sans syndic"), mediateur: false}];
+  dessinerVariantes();
+}
+function dessinerVariantes(){
+  const opt = (l, v) => l.map(([k, t]) => `<option value="${k}" ${k === v ? "selected" : ""}>${t}</option>`).join("");
+  $("#ex-variantes").innerHTML = VARIANTES.map((v, i) => `<tr data-i="${i}">
+    <td><input class="nom" data-k="nom" type="text" value="${esc(v.nom)}">${i === 0 ? '<div class="aide">référence</div>' : ""}</td>
+    <td><select data-k="mode">${opt([["negociation","négociation"],["debat","débat"]], v.mode)}</select></td>
+    <td><select data-k="taille" style="min-width:64px">${opt([["2","2"],["3","3"]], String(v.taille || 2))}</select></td>
+    <td><select data-k="backend">${opt(["test","ollama","openai","anthropic"].map(x => [x, x]), v.backend)}</select></td>
+    <td><input data-k="modele" type="text" value="${esc(v.modele)}" style="width:120px"></td>
+    <td><input data-k="temperature" type="number" step="0.1" min="0" max="1.5" value="${v.temperature}"></td>
+    <td><input data-k="tours" type="number" step="2" min="4" max="30" value="${v.tours}"></td>
+    <td style="text-align:center"><input data-k="mediateur" type="checkbox" ${v.mediateur ? "checked" : ""}></td>
+    ${["contre","partage","pour"].map(k => `<td><input data-m="${k}" type="number" step="0.5" min="0.5" value="${v.marges[k]}"></td>`).join("")}
+    <td>${VARIANTES.length > 2 ? `<button class="btn" data-suppr="${i}" title="Retirer">×</button>` : ""}</td></tr>`).join("");
+  $$("#ex-variantes input, #ex-variantes select").forEach(e => e.addEventListener("input", () => {
+    const v = VARIANTES[+e.closest("tr").dataset.i];
+    if (e.dataset.m) v.marges[e.dataset.m] = +e.value;
+    else v[e.dataset.k] = e.type === "checkbox" ? e.checked : e.type === "number" ? +e.value : e.value;
+    memo.ecrire("variantes", VARIANTES); totalExperience();
+  }));
+  $$("[data-suppr]").forEach(b => b.onclick = () => { VARIANTES.splice(+b.dataset.suppr, 1); memo.ecrire("variantes", VARIANTES); dessinerVariantes() });
+  totalExperience();
+}
+function totalExperience(){
+  const n = +$("#ex-n").value * +$("#ex-rep").value * VARIANTES.length;
+  $("#ex-total").textContent = `${n} scènes au total (${$("#ex-n").value} paire(s) × ${$("#ex-rep").value} répétition(s) × ${VARIANTES.length} variantes)`;
+}
+["#ex-n", "#ex-rep"].forEach(s => $(s).addEventListener("input", totalExperience));
+$("#ex-ajout").onclick = () => { VARIANTES.push({...varianteDepuisReglages("V" + (VARIANTES.length + 1))}); memo.ecrire("variantes", VARIANTES); dessinerVariantes() };
+
+let EXJOB = null;
+$("#ex-go").onclick = async () => {
+  const reg = lireReglages();
+  const corps = {sorte: "experience", nom: $("#ex-nom").value, n: +$("#ex-n").value, repetitions: +$("#ex-rep").value,
+    mode_agents: $("#ex-tirage").value, graine: +$("#ex-graine").value, ids: choisis, config: lireConfig(),
+    reglages: reg, etiquette: reg.etiquette,
+    variantes: VARIANTES.map(v => ({nom: v.nom, marges: v.marges,
+      reglages: {mode: v.mode, taille: +(v.taille || 2), backend: v.backend, modele: v.modele, temperature: v.temperature, tours: v.tours, mediateur: v.mediateur,
+                 juger: $("#juger").checked, modele_juge: $("#modele_juge").value}}))};
+  try {
+    const {job} = await api("/api/lancer", corps);
+    EXJOB = job; $("#ex-go").disabled = true; $("#ex-stop").style.display = "";
+    const j = await suivreSerie(job, corps.n, "#ex-progression", true);
+    toast(j.etat === "arrêté" ? `Expérience arrêtée après ${j.fait} scène(s) ; les résultats partiels sont affichés.` : `Expérience terminée : ${j.fait} scènes.`);
+    await chargerExperiences(j.experience);
+  } catch (e) { $("#ex-progression").innerHTML = `<div class="bandeau alerte" style="margin-top:14px">${esc(e.message)}</div>`; toast(e.message, true) }
+  EXJOB = null; $("#ex-go").disabled = false; $("#ex-stop").style.display = "none";
+};
+$("#ex-stop").onclick = () => { if (EXJOB){ api("/api/arreter/" + EXJOB, {}); toast("Arrêt demandé : l'expérience s'interrompt à la réplique suivante.") } };
+
+let EXP = null;
+async function chargerExperiences(choix){
+  const l = await api("/api/experiences");
+  if (!l.length){ $("#ex-liste").innerHTML = "<option>Aucune expérience pour l'instant</option>"; $("#ex-resultats").innerHTML = ""; return }
+  const actuel = choix || $("#ex-liste").value || l[0].experience;
+  $("#ex-liste").innerHTML = l.map(e => `<option value="${e.experience}" ${e.experience === actuel ? "selected" : ""}>${esc(e.nom)} · ${e.date.replace("T", " ")} · ${e.variantes.length} variantes · ${e.scenes} scènes</option>`).join("");
+  voirExperience($("#ex-liste").value);
+}
+$("#ex-liste").onchange = () => voirExperience($("#ex-liste").value);
+
+function decrire(rv){
+  if (!rv) return "";
+  const r = rv.reglages || {}, m = rv.marges || {};
+  const modele = r.backend === "test" ? "mode test" : `${r.backend} ${r.modele || ""}`.trim();
+  return [`${MODES[r.mode] || r.mode} à ${r.taille || 2} agents`, esc(modele),
+    `T = ${VIRG((+r.temperature).toFixed(1))}`, `${r.tours} répliques`,
+    r.mediateur ? "syndic" : "sans syndic",
+    `marges ${VIRG(m.contre)} / ${VIRG(m.partage)} / ${VIRG(m.pour)} %`].join(" · ");
+}
+function interpretation(c){
+  if (c.gagne + c.perd === 0) return "aucune paire ne diffère";
+  const sens = c.difference > 0 ? "plus d'accords" : c.difference < 0 ? "moins d'accords" : "autant d'accords";
+  return c.p_valeur < 0.05 ? `<span class="signif oui">${sens}, différence significative</span> (p = ${c.p_valeur.toFixed(3)})`
+    : `${sens}, mais <b>pas de différence démontrée</b> (p = ${c.p_valeur.toFixed(2)}) : plus de paires seraient nécessaires`;
+}
+async function voirExperience(id){
+  if (!id) return;
+  const e = EXP = await api("/api/experience/" + id);
+  const lignesComp = (liste, quoi) => liste.length ? `<table><thead><tr><th>Variante</th><th>Unités communes</th><th>${quoi} référence</th><th>${quoi} variante</th><th>Écart</th><th>Paires gagnées / perdues</th><th>Conclusion (McNemar exact)</th></tr></thead><tbody>
+    ${liste.map(c => `<tr><td>${esc(c.variante)}</td><td class="mono">${c.unites}</td><td class="mono">${pct(c.taux_reference)}</td><td class="mono">${pct(c.taux_variante)}</td>
+      <td class="mono">${c.difference > 0 ? "+" : ""}${Math.round(100 * c.difference)} pts</td><td class="mono">${c.gagne} / ${c.perd}</td><td style="white-space:normal">${interpretation(c)}</td></tr>`).join("")}</tbody></table>` : `<div class="vide" style="padding:16px">Pas de comparaison possible (variantes en débat ou sans accord mesuré).</div>`;
+  $("#ex-resultats").innerHTML = `
+    ${fig("tableau", "Résultats par variante, expérience « " + esc(e.nom) + " »", `<div style="overflow:auto"><table><thead><tr><th>Variante</th><th>Scènes</th><th>Taux d'accord</th><th>Accord si zone</th><th>Dans les marges</th><th>Accords valides</th><th>Sans syndic</th><th>Accord / zone vide</th><th>Position zone</th><th>Durée</th></tr></thead><tbody>
+      ${e.variantes.map(v => `<tr><td style="white-space:normal;min-width:190px;max-width:240px"><b style="font-weight:500">${esc(v.variante)}</b>${v.variante === e.reference ? ' <span class="pastille partage">référence</span>' : ""}<div class="aide">${decrire(v.reglages)}</div></td>
+        <td class="mono">${v.scenes}${v.erreurs ? ` <span class="non">(${v.erreurs} err.)</span>` : ""}</td><td>${ic(v.accord)}</td><td>${ic(v.accord_zone)}</td><td>${ic(v.coherent)}</td><td>${ic(v.accords_valides)}</td><td>${ic(v.sans_mediateur)}</td><td>${ic(v.accord_zone_vide)}</td>
+        <td>${moy(v.position_zone)}</td><td>${moy(v.duree_s, x => x.toFixed(1), " s")}</td></tr>`).join("")}</tbody></table></div>`,
+      lecture("entre crochets, l'intervalle de confiance à 95 % (Wilson). « Accords valides » ne compte que les accords obtenus dans une scène crédible : aucun montant inventé et, si le juge est activé, fidélité et cohérence d'au moins 3 sur 5. « Accord / zone vide » doit rester à 0 %, sinon les agents acceptent des options hors de leurs marges. « Position zone » vaut 0 si l'accord retient l'option la plus modeste de la zone, 1 la plus ambitieuse."),
+      champ(`${e.unites} groupe(s) d'agents, chacun joué par toutes les variantes.`))}
+    <h3 class="sec">Comparaison à la variante de référence</h3>
+    ${fig("tableau", "Taux d'accord, comparé à « " + esc(e.reference) + " »", lignesComp(e.comparaison_accord, "Accord"),
+      lecture("la comparaison est appariée : seuls les groupes d'agents joués par les deux variantes sont retenus, et le test exact de McNemar ne compte que ceux où elles diffèrent. « Gagnées » : accord avec la variante seulement ; « perdues » : avec la référence seulement."))}
+    ${fig("tableau", "Accords dans les marges, comparés à « " + esc(e.reference) + " »", lignesComp(e.comparaison_coherent, "Dans les marges"),
+      lecture("même lecture que le tableau précédent, mais sur les seuls accords qui respectent les marges secrètes des deux côtés."))}`;
+}
+$("#ex-csv").onclick = async () => {
+  if (!EXP) return;
+  const scenes = (await api("/api/scenes")).filter(s => s.experience === EXP.experience);
+  telecharger(scenes.map(s => ({experience: s.experience, variante: s.variante, unite: s.unite, agents: s.noms.join(" / "),
+    ids: s.ids.join("-"), positions: s.positions.join("-"), mode: s.mode, modele: `${s.backend} ${s.modele}`, temperature: s.temperature,
+    accord: s.accord, coherent: s.coherent, mediateur: s.mediateur, zone_taille: s.zone_taille, position_zone: s.position_zone,
+    proposition: s.proposition_finale, tour_accord: s.tour_accord, repliques: s.dialogue.length, duree_s: s.duree_s, erreur: s.erreur})),
+    `experience_${EXP.experience}.csv`);
+};
+function telecharger(lignes, nom){
+  if (!lignes.length) return;
+  const cols = Object.keys(lignes[0]);
+  const csv = [cols.join(","), ...lignes.map(s => cols.map(c => `"${String(s[c] ?? "").replace(/"/g, '""')}"`).join(","))].join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["﻿" + csv], {type: "text/csv"})); a.download = nom; a.click();
+}
+
+/* ---------- scènes jouées ---------- */
+let SCENES = [];
+async function chargerScenes(){
+  SCENES = await api("/api/scenes");
+  $("#sc-resume").textContent = `${SCENES.length} scène${SCENES.length > 1 ? "s" : ""} dans le journal`;
+  if (!SCENES.length){ $("#sc-liste").innerHTML = `<div class="vide">Aucune scène pour l'instant. Lance une scène depuis l'onglet Lancer.</div>`; $("#sc-detail").innerHTML = ""; return }
+  dessinerListeScenes();
+  voirScene(0);
+}
+function dessinerListeScenes(){
+  const t = $("#sc-cherche").value.toLowerCase().trim();
+  const vis = SCENES.map((s, k) => [s, k]).filter(([s]) => !t || `${s.noms.join(" ")} ${s.backend} ${s.modele} ${s.variante || ""} ${s.etiquette || ""} ${MODES[s.mode] || ""}`.toLowerCase().includes(t));
+  if (!vis.length){ $("#sc-liste").innerHTML = `<div class="vide">Aucune scène ne correspond.</div>`; return }
+  $("#sc-liste").innerHTML = vis.map(([s, k]) => `<button data-k="${k}">
+    <div class="l1"><span class="point ${s.accord === true ? "oui" : s.accord === false ? "non" : ""}"></span>${esc(s.noms.join(" / "))}</div>
+    <div class="l2">${new Date(s.date).toLocaleString("fr-FR", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"})}, ${MODES[s.mode] || "ancien"}, ${esc(s.backend)} ${esc(s.modele)}${s.variante ? ", " + esc(s.variante) : ""}${s.etiquette ? ", " + esc(s.etiquette) : ""}</div></button>`).join("");
+  $$("#sc-liste button").forEach(b => b.onclick = () => voirScene(+b.dataset.k));
+  $$("#sc-liste button").forEach(b => b.classList.toggle("actif", +b.dataset.k === SCENE_ACTIVE));
+}
+let SCENE_ACTIVE = 0;
+$("#sc-cherche").addEventListener("input", () => SCENES.length && dessinerListeScenes());
+function voirScene(k){
+  arreterLecture();
+  SCENE_ACTIVE = k;
+  $$("#sc-liste button").forEach(b => b.classList.toggle("actif", +b.dataset.k === k));
+  const s = SCENES[k];
+  const dial = s.dialogue.map(d => Array.isArray(d) ? d : [d.locuteur, d.texte, false]);
+  $("#sc-detail").innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      ${s.noms.map((n, i) => `<span class="pastille ${s.positions[i]}">${esc(n)} · ${POS[s.positions[i]] || s.positions[i]}</span>`).join("")}
+      <span style="color:var(--encre2);font-size:12.5px;margin-left:auto" class="mono">${MODES[s.mode] || "ancien"} · T=${s.temperature} · ${s.tours_max} répliques max${s.config_id ? " · config " + esc(s.config_id) : ""}</span></div>
+    ${verdict({...s, mode: s.mode || "ancien", dialogue: dial})}
+    <h3 class="sec">La scène</h3>
+    <div class="carte dialogue" id="sc-dlg">${dial.length ? transcription(dial, s.noms, s.erreur ? null : s.scene_id, s.positions) : `<div class="ecrit">Aucune réplique.</div>`}</div>
+    ${s.consignes ? `<details style="margin-top:12px;color:var(--encre2);font-size:13px"><summary style="cursor:pointer">Consignes envoyées aux agents</summary>
+      ${Object.entries(s.consignes).map(([n, c]) => `<h3 style="font-size:16px;margin-top:14px;color:var(--encre)">${esc(n)}</h3><pre class="fiche">${esc(c)}</pre>`).join("")}</details>` : ""}
+    <details style="margin-top:8px;color:var(--encre2);font-size:13px"><summary style="cursor:pointer">Zone d'accord, contrôles et configuration</summary>
+      <pre class="fiche">${esc(JSON.stringify({zone: s.zone, controles: s.controles, option: s.option, plafonds: s.plafonds, hausses: s.hausses, mode_agents: s.mode_agents, experience: s.experience, unite: s.unite, config: s.config}, null, 2))}</pre></details>`;
+  if ($("#sc-dlg .ecoute")) preparerEcoute($("#sc-dlg"));
+}
+
+/* ---------- analyses ---------- */
+let ANA = null, CELLULE = ["agreabilite", "marge_preservee"];
+async function chargerAnalyses(){
+  ANA = await api("/api/analyses");
+  const c = $("#an-contenu");
+  if (!ANA.lignes.length){ c.innerHTML = `<div class="carte vide">Pas encore de négociation dans le journal. Lance une série ou une expérience en mode négociation, puis reviens ici.</div>`; return }
+  const n = ANA.n_scenes;
+  $("#an-resume").textContent = `${ANA.lignes.length} participations d'agents, sur ${n} négociation(s)`;
+  c.innerHTML = `
+    ${fig("figure", "Concession moyenne selon la position de l'agent", blocConcessions(ANA.concessions),
+      lecture("la concession est la distance entre la première proposition d'un agent et l'accord final, rapportée au budget annuel. La barre donne la moyenne, le trait l'écart-type."),
+      champ(`les ${n} négociations du journal.`))}
+    ${fig("tableau", "Personnalité et résultat de la négociation", `<div style="overflow:auto">${matrice(ANA.correlations)}</div>`,
+      lecture("chaque case donne la corrélation entre un trait de personnalité et un résultat, avec son intervalle de confiance à 95 %. Le bleu signale qu'un trait élevé va avec un résultat élevé, le rouge l'inverse. « Net » signifie que l'intervalle exclut zéro. Cliquez sur une case pour voir le nuage de points correspondant."),
+      champ(`${ANA.lignes.length} participations d'agents, réparties sur ${n} scènes.`),
+      `<b>Avertissement :</b> quinze corrélations sont testées à la fois, donc une ou deux peuvent paraître nettes par hasard. La position (pour ou contre) pèse aussi sur les résultats : comparez à position égale avant de conclure.`)}
+    ${fig("figure", "<span id='an-titre-nuage'></span>", `<div class="nuage" id="an-nuage"></div>`,
+      `<span id="an-sous-nuage"></span>`)}`;
+  $$(".matrice button").forEach(b => b.onclick = () => { CELLULE = [b.dataset.t, b.dataset.r]; $$(".matrice button").forEach(x => x.classList.toggle("actif", x === b)); nuage() });
+  nuage();
+}
+function blocConcessions(liste){
+  if (!liste.length) return `<div class="aide">Aucune concession repérée pour l'instant.</div>`;
+  const tailles = [...new Set(liste.map(x => x.taille))].sort();
+  const max = Math.max(.05, ...liste.map(x => (x.moy || 0) + (x.et || 0)));
+  const cellule = (pos, t) => { const x = liste.find(l => l.position === pos && l.taille === t); if (!x || x.moy == null) return `<span class="t">—</span>`;
+    const w = v => Math.max(0, Math.min(100, 100 * v / max));
+    return `<div class="ligne-barre"><div class="barre"><i style="width:${w(x.moy)}%;background:${COUL[pos]}"></i><u style="left:${w(x.moy - x.et)}%;width:${w(x.moy + x.et) - w(x.moy - x.et)}%"></u></div><span>${Math.round(100 * x.moy)} %</span><small>n=${x.n}</small></div>` };
+  return `<div class="conc" style="grid-template-columns:120px repeat(${tailles.length},1fr)"><span></span>${tailles.map(t => `<span class="t">Scènes à ${t} agents</span>`).join("")}
+    ${["pour", "contre", "partage"].filter(p => liste.some(l => l.position === p)).map(p => `<span><span class="pastille ${p}">${POS[p]}</span></span>${tailles.map(t => cellule(p, t)).join("")}`).join("")}</div>`;
+}
+function couleurR(r){
+  if (r == null) return "var(--bloc)";
+  const a = Math.min(1, Math.abs(r) / .6) * .35;
+  return r > 0 ? `rgba(46,93,168,${a})` : `rgba(178,58,42,${a})`;
+}
+function matrice(corr){
+  const traits = [...new Map(corr.map(c => [c.trait, c.trait_nom]))], res = [...new Map(corr.map(c => [c.resultat, c.resultat_nom]))];
+  return `<table class="matrice"><thead><tr><th></th>${res.map(([, n]) => `<th>${n}</th>`).join("")}</tr></thead><tbody>
+    ${traits.map(([t, nt]) => `<tr><th style="text-align:right">${nt}</th>${res.map(([r]) => { const c = corr.find(x => x.trait === t && x.resultat === r);
+      const net = c.r != null && (c.bas > 0 || c.haut < 0);
+      const val = c.r == null ? "—" : (c.r > 0 ? "+" : "") + c.r.toFixed(2);
+      return `<td><button data-t="${t}" data-r="${r}" style="--c:${couleurR(c.r)}" class="${CELLULE[0] === t && CELLULE[1] === r ? "actif" : ""}">
+        <span class="r" data-tex="${val}${net ? "*" : ""}">${val}</span>
+        <small>${c.r == null ? (c.n < 5 ? `n = ${c.n}, trop peu` : "pas de variation") : `[${c.bas.toFixed(2)} ; ${c.haut.toFixed(2)}] · n=${c.n}`}</small>
+        ${net ? '<span class="sig">net</span>' : ""}</button></td>` }).join("")}</tr>`).join("")}</tbody></table>`;
+}
+function nuage(){
+  const [t, r] = CELLULE, c = ANA.correlations.find(x => x.trait === t && x.resultat === r);
+  $("#an-titre-nuage").textContent = `${c.trait_nom} et ${c.resultat_nom.toLowerCase()}`;
+  $("#an-sous-nuage").innerHTML = "";
+  const pts = ANA.lignes.filter(l => l[r] != null);
+  $("#an-sous-nuage").innerHTML = pts.length
+    ? lecture(`chaque point est la participation d'un agent à une négociation, colorée selon sa position. ${pts.length} points${r === "accord" ? " ; l'accord vaut 0 ou 1, les points sont légèrement écartés pour rester visibles" : ""}. Les tirets donnent la tendance linéaire.`)
+    : "Aucune donnée pour ce résultat.";
+  if (!pts.length){ $("#an-nuage").innerHTML = ""; return }
+  const W = 720, H = 300, ml = 52, mr = 16, mt = 12, mb = 36;
+  const ys = pts.map(p => p[r]), ymin = Math.min(0, ...ys), ymax = Math.max(1, ...ys);
+  const x = v => ml + (v - 1) / 4 * (W - ml - mr), y = v => mt + (1 - (v - ymin) / (ymax - ymin || 1)) * (H - mt - mb);
+  let g = "";
+  for (let v = 1; v <= 5; v++) g += `<line x1="${x(v)}" x2="${x(v)}" y1="${mt}" y2="${H - mb}" stroke="var(--filet)"/><text x="${x(v)}" y="${H - mb + 16}" text-anchor="middle" class="ax">${v}</text>`;
+  const pasY = (ymax - ymin) > 1.2 ? .5 : .25;
+  for (let v = Math.ceil(ymin / pasY) * pasY; v <= ymax + 1e-9; v += pasY) g += `<line x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--filet)"/><text x="${ml - 8}" y="${y(v) + 4}" text-anchor="end" class="ax">${r === "accord" ? (v === 1 ? "oui" : v === 0 ? "non" : "") : Math.round(v * 100) + " %"}</text>`;
+  g += `<text x="${(ml + W - mr) / 2}" y="${H - 4}" text-anchor="middle" class="ax">${c.trait_nom} (1 à 5)</text>`;
+  // droite des moindres carrés
+  const mx = pts.reduce((s, p) => s + p[t], 0) / pts.length, my = ys.reduce((s, v) => s + v, 0) / ys.length;
+  const sxx = pts.reduce((s, p) => s + (p[t] - mx) ** 2, 0), sxy = pts.reduce((s, p) => s + (p[t] - mx) * (p[r] - my), 0);
+  if (sxx > 0){ const b = sxy / sxx, a = my - b * mx; g += `<line x1="${x(1)}" y1="${y(a + b)}" x2="${x(5)}" y2="${y(a + 5 * b)}" stroke="var(--encre)" stroke-width="1.5" stroke-dasharray="5 4" opacity=".6"/>` }
+  let graine = 7; const alea = () => (graine = (graine * 16807) % 2147483647) / 2147483647 - .5;
+  g += pts.map(p => { const jy = r === "accord" ? alea() * .12 : 0;
+    return `<circle cx="${x(p[t]) + alea() * 4}" cy="${y(p[r] + jy)}" r="4" fill="${COUL[p.position] || "var(--encre2)"}" opacity=".75"><title>${esc(p.nom)} (${POS[p.position] || p.position}) : ${t} ${p[t].toFixed(1)}, ${r} ${r === "accord" ? (p[r] ? "oui" : "non") : Math.round(p[r] * 100) + " %"}</title></circle>` }).join("");
+  $("#an-nuage").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Nuage de points">${g}</svg>
+    <div class="legende" style="display:flex;gap:18px">${["pour", "contre", "partage"].map(p => `<div class="leg-agent"><i style="background:${COUL[p]}"></i><span>${POS[p]}</span></div>`).join("")}<div class="leg-agent"><span>tirets : tendance linéaire</span></div></div>`;
+}
+
+/* ---------- statistiques ---------- */
+const filtres = {modele: [], etiquette: [], serie: [], mode: []};
+let groupe = ["modele_complet"], DERNIER = null;
+const GROUPES = {modele_complet:"modèle", mode:"mode", taille:"agents par scène", valide:"scène valide", temperature:"température", etiquette:"étiquette", tours_max:"répliques max", mediateur_actif:"syndic activé",
+                 serie:"série", experience:"expérience", variante:"variante", scenario_titre:"scénario", config_id:"configuration", mode_agents:"tirage des agents"};
+
+async function chargerStats(){
+  const q = new URLSearchParams();
+  Object.entries(filtres).forEach(([k, v]) => v.forEach(x => q.append(k, x)));
+  groupe.forEach(g => q.append("groupe", g));
+  const d = DERNIER = await api("/api/stats?" + q);
+  const m = d.mesures;
+  $("#st-resume").textContent = m && m.scenes ? `${m.scenes} scène(s) retenue(s), dont ${m.negociations} négociation(s)` : "";
+  if (!m || (!m.scenes && !m.erreurs)){ $("#st-contenu").innerHTML = `<div class="carte vide">Aucune scène jouée pour l'instant. Lance une série ou une expérience.</div>`; return }
+  const puces = (cle, valeurs, etiq = x => x || "sans étiquette") => `<div class="puces">${valeurs.map(v =>
+     `<button class="puce ${filtres[cle].includes(v) ? "actif" : ""}" data-f="${cle}" data-v="${esc(v)}">${esc(etiq(v))}</button>`).join("") || '<span style="color:var(--encre2)">—</span>'}</div>`;
+  const kpi = (t, v, s = "") => `<div class="carte kpi"><small>${t}</small><b>${v}</b><span>${s}</span></div>`;
+  const icTexte = p => p ? `[${Math.round(100*p.bas)}–${Math.round(100*p.haut)} %] · ${p.k}/${p.n}` : "";
+  const g = d.groupes;
+  $("#st-contenu").innerHTML = `
+    <div class="bloc-filtres">
+      <span>Modes</span>${puces("mode", d.filtres.modes, x => MODES[x] || x)}
+      <span>Modèles</span>${puces("modele", d.filtres.modeles)}
+      <span>Étiquettes</span>${puces("etiquette", d.filtres.etiquettes)}
+      <span>Séries</span>${puces("serie", d.filtres.series, x => x)}
+    </div>
+    <div class="kpis">
+      ${kpi("Scènes", m.scenes, `${m.negociations} en négociation${m.erreurs ? `, ${m.erreurs} en erreur` : ""}${m.interrompues ? `, ${m.interrompues} arrêtée(s)` : ""}${m.scenes_mal_formees ? `, ${pct(m.scenes_mal_formees.p)} mal formées` : ""}`)}
+      ${kpi("Taux d'accord", pct(m.accord?.p), icTexte(m.accord))}
+      ${kpi("Accord si zone", pct(m.accord_zone?.p), icTexte(m.accord_zone))}
+      ${kpi("Dans les marges", pct(m.coherent?.p), icTexte(m.coherent))}
+      ${kpi("Sans syndic", pct(m.sans_mediateur?.p), icTexte(m.sans_mediateur))}
+      ${kpi("Accord / zone vide", pct(m.accord_zone_vide?.p), m.accord_zone_vide ? `${icTexte(m.accord_zone_vide)} · cible 0 %` : "aucune scène à zone vide")}
+      ${kpi("Accords valides", pct(m.accords_valides?.p), m.accords_valides ? `${icTexte(m.accords_valides)} · scène crédible` : "aucun accord")}
+      ${kpi("Note du juge", m.note_fidelite ? m.note_fidelite.moy.toFixed(1) + " / 5" : "—", m.scenes_jugees ? `fidélité moyenne sur ${m.scenes_jugees} scène(s) jugée(s)${m.note_coherence ? `, cohérence ${m.note_coherence.moy.toFixed(1)}` : ""}` : "active le juge dans la barre latérale")}
+    </div>
+    <h3 class="sec">Comparer les scènes</h3>
+    <p class="note" style="margin:0 0 10px">Choisissez un ou plusieurs critères : le tableau ci-dessous découpe le journal selon ces critères.</p>
+    <div class="puces">${Object.entries(GROUPES).map(([k, v]) => `<button class="puce ${groupe.includes(k) ? "actif" : ""}" data-g="${k}">${v}</button>`).join("")}</div>
+    <div style="height:14px"></div>
+    ${g.length ? fig("tableau", "Mesures selon " + groupe.map(x => GROUPES[x]).join(" et "), `<div style="overflow:auto"><table><thead><tr>
+       ${groupe.map(x => `<th>${GROUPES[x]}</th>`).join("")}<th>Scènes</th><th>Taux d'accord</th><th>Accord si zone</th><th>Dans les marges</th><th>Accords valides</th><th>Sans syndic</th><th>Accord / zone vide</th><th>Position zone</th><th>Durée</th></tr></thead>
+       <tbody>${g.map(r => `<tr>${groupe.map(x => `<td>${esc(x === "mode" ? (MODES[r[x]] || r[x]) : x === "valide" ? (r[x] === true ? "oui" : r[x] === false ? "non" : "—") : r[x] ?? "—")}</td>`).join("")}
+         <td class="mono">${r.scenes}</td><td>${ic(r.accord)}</td><td>${ic(r.accord_zone)}</td><td>${ic(r.coherent)}</td><td>${ic(r.accords_valides)}</td><td>${ic(r.sans_mediateur)}</td><td>${ic(r.accord_zone_vide)}</td>
+         <td>${moy(r.position_zone)}</td><td>${moy(r.duree_s, x => x.toFixed(1), " s")}</td></tr>`).join("")}</tbody></table></div>`,
+       lecture("la barre donne le taux observé, le trait son intervalle de confiance à 95 % (méthode de Wilson). Deux groupes dont les intervalles se recouvrent largement ne sont pas départagés : jouez plus de scènes, ou passez par une expérience, qui compare sur les mêmes groupes d'agents."),
+       champ(`les ${m.scenes} scènes du journal retenues par les filtres ci-dessus.`)) : ""}
+    <h3 class="sec">Le journal</h3>
+    ${fig("tableau", "Toutes les scènes enregistrées", `<div class="tableau-wrap" style="max-height:460px"><table><thead><tr><th>Date</th><th>Agents</th><th>Mode</th><th>Modèle</th><th>T°</th><th>Étiquette</th><th>Variante</th><th>Accord</th><th>Marges</th><th>Valide</th><th>Syndic</th><th>Zone</th><th>Proposition</th><th>Durée</th></tr></thead>
+      <tbody>${d.scenes.map(s => `<tr><td class="mono">${s.date.replace("T", " ")}</td><td>${esc(s.agents)}</td><td>${MODES[s.mode] || s.mode}</td><td>${esc(s.modele_complet)}</td><td class="mono">${s.temperature}</td>
+        <td>${esc(s.etiquette || "")}</td><td>${esc(s.variante || "")}</td><td>${s.erreur ? '<span class="non">' + (s.erreur === "Interrompue" ? "arrêtée" : "erreur") + '</span>' : ouinon(s.accord)}</td><td>${ouinon(s.coherent)}</td><td>${ouinon(s.valide)}</td><td>${s.mediateur ? "oui" : "non"}</td>
+        <td class="mono">${s.zone_taille ?? "—"}</td><td style="white-space:normal;min-width:220px">${esc(s.proposition_finale || "")}</td><td class="mono">${s.duree_s} s</td></tr>`).join("")}</tbody></table></div>`,
+      champ(`${d.scenes.length} scène(s), de la plus récente à la plus ancienne.`))}`;
+  $$("[data-f]").forEach(b => b.onclick = () => { const l = filtres[b.dataset.f], v = b.dataset.v; l.includes(v) ? l.splice(l.indexOf(v), 1) : l.push(v); chargerStats() });
+  $$("[data-g]").forEach(b => b.onclick = () => { const v = b.dataset.g; groupe.includes(v) ? groupe = groupe.filter(x => x !== v) : groupe.push(v); chargerStats() });
+}
+$("#csv").onclick = () => DERNIER && telecharger(DERNIER.scenes, "scenes_labo.csv");
+$("#vider").onclick = async () => {
+  if (!await confirmer("Vider le journal ?", "Toutes les scènes disparaîtront des statistiques. Une copie de sauvegarde est gardée dans le dossier scenes/.", "Vider le journal")) return;
+  await api("/api/vider", {}); chargerStats(); toast("Journal vidé. La copie de sauvegarde est dans scenes/.");
+};
+</script>
+</body>
+</html>
