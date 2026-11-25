@@ -36,6 +36,30 @@ Rien à installer en plus de pandas et numpy (serveur de la bibliothèque standa
 - **Débat** : la scène de `scene.py`, où chacun défend sa position. Pas d'accord mesuré.
   Sert de condition de contrôle.
 
+## L'interface
+
+Le labo est présenté comme un document d'étude : chaque résultat est une **figure** ou un
+**tableau numéroté**, suivi de ses notes de lecture (« Lecture : », « Champ : », « Source : »),
+comme dans une publication statistique. Deux conséquences pratiques :
+
+- **Chaque bloc s'exporte.** Au survol d'une figure, un bouton **PNG** enregistre le graphique
+  en haute résolution ; sur un tableau, **LaTeX** copie un `\begin{table}` prêt à coller dans le
+  rapport (avec `\caption` et `\label`), et **CSV** l'enregistre pour un tableur.
+- **La page s'imprime.** `Ctrl+P` sort l'onglet affiché sans le sommaire ni les commandes,
+  les figures non coupées : utile pour une annexe ou une relecture papier.
+
+Les réglages ne sont plus affichés en permanence : la barre **Protocole**, en haut des onglets
+Lancer et Expériences, les résume en une phrase (« Négociation à 3 agents, modèle ollama
+qwen3.5:4b, température 0,9, 16 répliques au plus, syndic actif, marges 5 / 6 / 10 % du
+revenu »). Le bouton **Modifier** ouvre le panneau où tout se règle. Cette phrase est aussi
+ce qui est enregistré avec chaque scène dans le journal.
+
+Le sommaire, à gauche, garde en permanence l'état du **modèle** et de la **voix**, et la file
+d'attente. L'interface suit le thème clair ou sombre du système.
+
+Les polices (Spectral, IBM Plex) sont chargées depuis Google Fonts : sans connexion, le labo
+fonctionne et s'affiche avec les polices du système.
+
 ## Onglets
 
 1. **Population** : les 500 agents, filtres, fiche, enjeux, marge secrète.
@@ -47,7 +71,7 @@ Rien à installer en plus de pandas et numpy (serveur de la bibliothèque standa
 5. **Scènes jouées** : relecture, verdict, **consignes exactes envoyées aux agents**,
    zone d'accord, configuration.
 6. **Statistiques** : mesures sur tout le journal, filtrables et comparables par
-   modèle, mode, nombre d'agents, température, étiquette, variante, configuration…
+   modèle, mode, nombre d'agents, scène valide, température, étiquette, variante, configuration…
 7. **Analyses** : qui concède le plus selon sa position, et corrélations entre la
    personnalité (OCEAN) et le résultat de chaque agent.
 
@@ -158,8 +182,4 @@ Exemples d'expériences utiles :
 Les appels au code du projet sont tous dans `adaptateur.py` (`lancer_scene`, `zone`,
 `marge`, `choisir_paire`, `tirer_groupes`). Les hypothèses de négociation (parts des
 postes, étalements, marges par défaut, règles « tient à ») sont en tête de
-`negociation.py`.r_paire`, `tirer_groupes`). Les hypothèses de négociation (parts des
-postes, étalements, marges par défaut, règles « tient à ») sont en tête de
 `negociation.py`.
-
-La barre latérale indique les fonctions détectées (✅ / ⬜).
